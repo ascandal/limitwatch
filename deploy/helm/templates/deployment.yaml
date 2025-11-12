@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: limitwatch
+  labels:
+    app: limitwatch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: limitwatch
+  template:
+    metadata:
+      labels:
+        app: limitwatch
+    spec:
+      containers:
+        - name: alarmd
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: "{{ .Values.image.pullPolicy }}"
+          env:
+            - name: PORT
+              value: "{{ .Values.env.PORT }}"
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+            initialDelaySeconds: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            initialDelaySeconds: 3
