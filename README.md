@@ -6,11 +6,6 @@ observability, and deployment artifacts.
 
 ## Run Locally
 
-### Change module path first (optional)
-```bash
-sed -i 's|github.com/ascandal/limitwatch|github.com/ascandal/limitwatch|g' go.mod
-```
-
 ### Start the server
 
 With **pprof** disabled:
