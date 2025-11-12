@@ -67,6 +67,21 @@ docker run -p 8080:8080 limitwatch:0.0.1
 - **User:** Runs as nonroot.
 - **Port:** Exposes port 8080.
 
+#### Build and run
+```bash
+# Build with metadata
+docker build -t limitwatch:dev \
+  --build-arg VERSION=0.0.1 \
+  --build-arg COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo none) \
+  --build-arg BUILDDATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ') \
+  -f deploy/docker/Dockerfile .
+
+# Run it
+docker run --rm -p 8080:8080 limitwatch:dev
+# Then hit http://localhost:8080/healthz, /readyz, /version
+```
+
+
 ### Helm chart skeleton (deploy/helm)
 - Chart.yaml: metadata (v0.1.0 chart, appVersion 0.0.1 placeholder).
 - values.yaml:
