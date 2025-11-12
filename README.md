@@ -6,13 +6,25 @@ observability, and deployment artifacts.
 
 ## Run Locally
 
+### Change module path first (optional)
 ```bash
-# Change module path first (optional)
 sed -i 's|github.com/ascandal/limitwatch|github.com/ascandal/limitwatch|g' go.mod
+```
 
-# Start the server
+### Start the server
+
+With **pprof** disabled:
+
+```bash
 go run ./cmd/alarmd
 ```
+
+Or with **pprof** enabled for local debugging `/debug/pprof/`:
+
+```bash
+PPROF_ENABLED=true go run ./cmd/alarmd
+```
+
 
 ### In another terminal
 ```bash
@@ -29,8 +41,6 @@ curl -sf localhost:8080/readyz
 curl -sf localhost:8080/version
 ```
 > Returns: `{"service":"alarmd", "version":"dev", "commit":"none", "date":"unknown"}`
-
-> pprof is available at /debug/pprof/
 
 
 ### Build (with version info):
@@ -65,7 +75,7 @@ docker run -p 8080:8080 limitwatch:0.0.1
 ### Helm chart skeleton (deploy/helm)
 - Chart.yaml: metadata (v0.1.0 chart, appVersion 0.0.1 placeholder).
 - values.yaml:
-    - image.repository: ghcr.io/ascandal/limitwatch (change to your registry)
+    - image.repository: ghcr.io/ascandal/limitwatch
     - image.tag: latest
     - service.port: 80 (front door) → maps to container 8080
     - env.PORT: "8080"
@@ -75,10 +85,10 @@ docker run -p 8080:8080 limitwatch:0.0.1
 - templates/service.yaml:
     - ClusterIP on port 80 → targetPort 8080
 
-**Install (run from repo root, once you’ve pushed your image):**
+**Install (run from repo root, once image is pushed):**
 ```bash
 helm install limitwatch ./deploy/helm \
-  --set image.repository=ghcr.io/<you>/limitwatch \
+  --set image.repository=ghcr.io/ascandal/limitwatch \
   --set image.tag=0.0.1
 ```
 

@@ -33,14 +33,14 @@ LimitWatch/
 │  ├─ docker/Dockerfile        # Multi-stage → distroless:nonroot runtime
 │  └─ helm/
 │     ├─ Chart.yaml            # Chart metadata
-│     ├─ values.yaml           # Image/port values (edit per your repo)
+│     ├─ values.yaml           # Image/port values
 │     └─ templates/
 │        ├─ deployment.yaml    # Deployment + probes
 │        └─ service.yaml       # ClusterIP Service
 ├─ grafana/README.md           # Placeholder (dashboards come in Phase 5)
 ├─ .github/workflows/ci.yml    # CI: fmt, vet, staticcheck, test -race, build
 ├─ Makefile                    # Common tasks (build/run/docker/etc.)
-├─ go.mod                      # Module path (change to your repo)
+├─ go.mod                      # Module path
 ├─ .gitignore                  # Sensible ignores
 ├─ LICENSE                     # MIT
 └─ README.md                   # Quick start
