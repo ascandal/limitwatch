@@ -1,5 +1,9 @@
 package storage
 
+// _ "modernc.org/sqlite" imports the package only for its side-effects
+// It will not reference any of its exported names directly.
+// `sqlite.` cannot be referenced.
+// Used so sql.Open("sqlite", dsn) succeeds without error “unknown driver ‘sqlite’”.
 import (
     "context"
     "database/sql"
