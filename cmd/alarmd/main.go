@@ -43,8 +43,8 @@ func main() {
     logger := slog.New(
         slog.NewJSONHandler(
             os.Stdout,
-            &slog.HandlerOptions{Level: slog.LevelInfo}
-        )
+            &slog.HandlerOptions{Level: slog.LevelInfo},
+        ),
     )
     // Uncomment for all packages to use logger via slog.Default():
     // slog.SetDefault(logger)
@@ -54,7 +54,7 @@ func main() {
     // TODO: update core usage later.
     dsn := config.Getenv(
         "DB_DSN",
-        "file:limitwatch.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)"
+        "file:limitwatch.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)",
     )
 
     db, err := storage.Open(dsn)
@@ -130,7 +130,7 @@ func main() {
         writeText(
             w,
             http.StatusOK,
-            "LimitWatch alarmd up. See /healthz, /readyz, /version. Enable /debug/pprof/* via PPROF_ENABLED=true"
+            "LimitWatch alarmd up. See /healthz, /readyz, /version. Enable /debug/pprof/* via PPROF_ENABLED=true",
         )
     })
 
@@ -156,7 +156,7 @@ func main() {
             "starting server",
             "addr", addr,
             "version", version.Version,
-            "commit", version.Commit
+            "commit", version.Commit,
         )
 
         if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
@@ -169,14 +169,14 @@ func main() {
     ctx, stop := signal.NotifyContext(
         context.Background(),
         syscall.SIGINT,
-        syscall.SIGTERM
+        syscall.SIGTERM,
     )
     <-ctx.Done()
     stop()
 
     shutdownCtx, cancel := context.WithTimeout(
         context.Background(),
-        10*time.Second
+        10*time.Second,
     )
     defer cancel()
 
@@ -205,7 +205,7 @@ func allowMethods(w http.ResponseWriter, r *http.Request, methods ...string) boo
     http.Error(
         w,
         http.StatusText(http.StatusMethodNotAllowed),
-        http.StatusMethodNotAllowed
+        http.StatusMethodNotAllowed,
     )
 
     return false

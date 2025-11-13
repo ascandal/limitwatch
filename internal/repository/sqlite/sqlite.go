@@ -42,7 +42,7 @@ func (r *ruleRepo) Create(ctx context.Context, rule *domain.Rule) error {
         boolToInt(rule.Enabled),
         string(rule.Config),
         now,
-        now
+        now,
     )
 
     if err != nil {
@@ -66,7 +66,7 @@ func (r *ruleRepo) GetByID(ctx context.Context, id int64) (*domain.Rule, error) 
     row := r.db.QueryRowContext(
         ctx,
         `SELECT id, name, signal, type, severity, latch, enabled, config, version, created_at, updated_at FROM rules WHERE id = ?`,
-        id
+        id,
     )
 
     return scanRule(row)
@@ -76,7 +76,7 @@ func (r *ruleRepo) GetByName(ctx context.Context, name string) (*domain.Rule, er
     row := r.db.QueryRowContext(
         ctx,
         `SELECT id, name, signal, type, severity, latch, enabled, config, version, created_at, updated_at FROM rules WHERE name = ?`,
-        name
+        name,
     )
 
     return scanRule(row)
@@ -85,7 +85,7 @@ func (r *ruleRepo) GetByName(ctx context.Context, name string) (*domain.Rule, er
 func (r *ruleRepo) List(ctx context.Context) ([]domain.Rule, error) {
     rows, err := r.db.QueryContext(
         ctx,
-        `SELECT id, name, signal, type, severity, latch, enabled, config, version, created_at, updated_at FROM rules ORDER BY id ASC`
+        `SELECT id, name, signal, type, severity, latch, enabled, config, version, created_at, updated_at FROM rules ORDER BY id ASC`,
     )
 
     if err != nil {
@@ -158,7 +158,7 @@ func (a *alarmRepo) Create(ctx context.Context, al *domain.Alarm) error {
         al.AckedBy,
         al.SilenceUntil,
         now,
-        now
+        now,
     )
 
     if err != nil {
@@ -181,7 +181,7 @@ func (a *alarmRepo) GetByID(ctx context.Context, id int64) (*domain.Alarm, error
     row := a.db.QueryRowContext(
         ctx,
         `SELECT id, rule_id, entity, state, first_seen, last_seen, acked_by, silence_until, created_at, updated_at FROM alarms WHERE id = ?`,
-        id
+        id,
     )
 
     var al domain.Alarm
@@ -224,7 +224,7 @@ func (a *alarmRepo) List(ctx context.Context, limit int) ([]domain.Alarm, error)
     rows, err := a.db.QueryContext(
         ctx,
         `SELECT id, rule_id, entity, state, first_seen, last_seen, acked_by, silence_until, created_at, updated_at FROM alarms ORDER BY updated_at DESC LIMIT ?`,
-        limit
+        limit,
     )
 
     if err != nil {
@@ -280,7 +280,7 @@ func (a *alarmRepo) CreateEvent(ctx context.Context, ev *domain.AlarmEvent) erro
         ev.Actor,
         ev.At,
         ev.Note,
-        string(ev.Payload)
+        string(ev.Payload),
     )
 
     if err != nil {
@@ -297,7 +297,7 @@ func (a *alarmRepo) ListEvents(ctx context.Context, alarmID int64) ([]domain.Ala
     rows, err := a.db.QueryContext(
         ctx,
         `SELECT id, alarm_id, type, actor, at, note, payload FROM alarm_events WHERE alarm_id = ? ORDER BY at ASC`,
-        alarmID
+        alarmID,
     )
 
     if err != nil {

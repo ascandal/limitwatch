@@ -40,7 +40,7 @@ func main() {
 
     dsn := config.Getenv(
         "DB_DSN",
-        "file:limitwatch.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"
+        "file:limitwatch.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)",
     )
     db, err := storage.Open(dsn)
 
@@ -113,7 +113,7 @@ func main() {
                     r.Signal,
                     r.Type,
                     r.Latch,
-                    r.Severity
+                    r.Severity,
                 )
             }
         default:
@@ -171,7 +171,7 @@ func main() {
                 a.ID,
                 a.RuleID,
                 a.Entity,
-                a.State
+                a.State,
             )
 
         case "list":
@@ -189,7 +189,7 @@ func main() {
                     a.RuleID,
                     a.Entity,
                     a.State,
-                    a.UpdatedAt.Format(time.RFC3339)
+                    a.UpdatedAt.Format(time.RFC3339),
                 )
             }
         default:
