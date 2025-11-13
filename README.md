@@ -6,6 +6,10 @@ observability, and deployment artifacts.
 
 ## Run Locally
 
+```bash
+go mod tidy
+```
+
 ### Start the server
 
 With **pprof** disabled:
