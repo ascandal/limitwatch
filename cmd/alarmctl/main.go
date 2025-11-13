@@ -41,8 +41,8 @@ func main() {
         "DB_DSN",
         "file:limitwatch.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)",
     )
-    db, err := storage.Open(dsn)
 
+    db, err := storage.Open(dsn)
     if err != nil {
         fmt.Fprintln(os.Stderr, "open db:", err)
         os.Exit(1)

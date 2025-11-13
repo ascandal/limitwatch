@@ -74,23 +74,33 @@ LimitWatch/
 ### Getting started
 
 1) Ensure your module path matches your repo (e.g., `github.com/ascandal/limitwatch`) and run:
+
 ```bash
 go mod tidy
 ```
 
 2) Run migrations implicitly by starting either the server or the CLI (both call `storage.Migrate`):
+
 ```bash
 # Start server (db: file:limitwatch.db)
 go run ./cmd/alarmd
 ```
 
 3) Create a rule via CLI:
+Threshold rule with config JSON (example: low threshold with hysteresis)
+
 ```bash
-# Threshold rule with config JSON (example: low threshold with hysteresis)
-go run ./cmd/alarmctl rule create       --name BatteryLow       --signal Battery.Voltage       --type threshold       --severity warn       --latch       --config-json '{"lo": 23.5, "hysteresis": 0.2, "deadband": 0.1, "duration_ms": 0}'
+go run ./cmd/alarmctl rule create \
+    --name BatteryLow \
+    --signal Battery.Voltage \
+    --type threshold \
+    --severity warn \
+    --latch \
+    --config-json '{"lo": 23.5, "hysteresis": 0.2, "deadband": 0.1, "duration_ms": 0}'
 ```
 
 4) List rules:
+
 ```bash
 go run ./cmd/alarmctl rule list
 ```
