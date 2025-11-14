@@ -37,7 +37,6 @@ import (
     "time"
 
     "github.com/ascandal/limitwatch/internal/config"
-    "github.com/ascandal/limitwatch/internal/domain"
     "github.com/ascandal/limitwatch/internal/engine"
     "github.com/ascandal/limitwatch/internal/ingest"
     "github.com/ascandal/limitwatch/internal/repository/sqlite"

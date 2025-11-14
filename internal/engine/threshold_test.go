@@ -4,7 +4,6 @@ import (
     "testing"
     "time"
 
-    "github.com/ascandal/limitwatch/internal/domain"
     "github.com/ascandal/limitwatch/internal/ingest"
 )
 

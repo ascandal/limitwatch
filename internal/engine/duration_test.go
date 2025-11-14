@@ -34,6 +34,10 @@ func TestDuration_GreaterThan(t *testing.T) {
 
     if act, _ := evalDuration(cfg, s, pts[3]); !act {
         t.Fatal("should be active after duration")
+    } else {
+        // In the real engine, the alarm state flag is updated outside of evalDuration.
+        // For unit test, explicitly set it so hysteresis logic is exercised.
+        s.Active = true
     }
 
     // go down but within hysteresis; stay active
