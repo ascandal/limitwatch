@@ -36,9 +36,12 @@ import (
     "syscall"
     "time"
 
+    "github.com/ascandal/limitwatch/internal/api"
     "github.com/ascandal/limitwatch/internal/config"
     "github.com/ascandal/limitwatch/internal/engine"
     "github.com/ascandal/limitwatch/internal/ingest"
+    "github.com/ascandal/limitwatch/internal/manager"
+    "github.com/ascandal/limitwatch/internal/repository"
     "github.com/ascandal/limitwatch/internal/repository/sqlite"
     "github.com/ascandal/limitwatch/internal/storage"
     "github.com/ascandal/limitwatch/internal/version"
@@ -80,6 +83,7 @@ func main() {
     logger.Info("database ready", "dsn", dsn)
 
     repo := sqlite.New(db)
+    repos := repository.Repositories{Rules: repo.Rules, Alarms: repo.Alarms}
     rules, err := repo.Rules.List(context.Background())
 
     if err != nil {
@@ -89,7 +93,7 @@ func main() {
 
     logger.Info("rules loaded", "count", len(rules))
 
-    // ----- Engine setup -----
+    // ----- Engine + Manager setup -----
     qsize := config.GetenvInt("INGEST_QUEUE_SIZE", 4096)
     workers := config.GetenvInt("WORKERS", runtime.NumCPU())
     trace := config.BoolEnv("TRACE_ENABLED", false)
@@ -105,6 +109,10 @@ func main() {
     defer cancel()
     eng.Start(ctx)
 
+    // Start the manager.
+    mgr := manager.New(repos, logger)
+    mgr.Start(ctx, eng.Reports())
+
     // Optional deterministic generator for demo
     if config.BoolEnv("GEN_ENABLED", false) {
         seed := int64(config.GetenvInt("GEN_SEED", 42))
@@ -116,6 +124,7 @@ func main() {
         logger.Info("generator enabled", "pattern", pattern, "rate_hz", rate, "seed", seed)
     }
 
+    // ----- HTTP routing -----
     port := config.Getenv("PORT", defaultPort)
     addr := ":" + port
 
@@ -175,11 +184,11 @@ func main() {
         writeText(
             w,
             http.StatusOK,
-            "LimitWatch alarmd up. See /healthz, /readyz, /version, /v1/ingest. Enable /debug/pprof/* via PPROF_ENABLED=true",
+            "LimitWatch alarmd up. See /healthz, /readyz, /version, /v1/ingest, /v1/rules, /v1/alarms. Enable /debug/pprof/* via PPROF_ENABLED=true",
         )
     })
 
-    // /v1/ingest: accepts object or array of {name, value, ts?, entity?}
+    // Telemetry point injection (single or multiple points)
     mux.HandleFunc("/v1/ingest", func(w http.ResponseWriter, r *http.Request) {
         if !allowMethods(w, r, http.MethodPost) {
             return
@@ -201,6 +210,7 @@ func main() {
             http.Error(w, "read body failed", http.StatusBadRequest)
             return
         }
+
         defer r.Body.Close()
 
         // Try array first
@@ -220,9 +230,15 @@ func main() {
         n := 0
         for i := range pts {
             if err := pts[i].Normalize(); err != nil {
-                http.Error(w, fmt.Sprintf("invalid point at index %d: %v", i, err), http.StatusBadRequest)
+                http.Error(
+                    w,
+                    fmt.Sprintf("invalid point at index %d: %v", i, err),
+                    http.StatusBadRequest,
+                )
+
                 return
             }
+
             if err := eng.Enqueue(pts[i]); err != nil {
                 if errors.Is(err, engine.ErrQueueFull) {
                     w.Header().Set("X-Queue-Len", fmt.Sprintf("%d", eng.QueueLen()))
@@ -235,12 +251,22 @@ func main() {
 
                 return
             }
+
             n++
         }
 
         w.Header().Set("X-Queue-Len", fmt.Sprintf("%d", eng.QueueLen()))
         writeJSON(w, http.StatusAccepted, map[string]any{"ingested": n})
     })
+
+    // Secure APIs (JWT)
+    jwtSecret := []byte(config.Getenv("JWT_SECRET", ""))
+
+    if len(jwtSecret) == 0 {
+        logger.Warn("JWT disabled (JWT_SECRET empty); all API calls allowed as admin (dev mode).")
+    }
+
+    api.New(repos, mgr, jwtSecret, logger).Routes(mux)
 
     if config.BoolEnv("PPROF_ENABLED", false) {
         registerPprof(mux)
@@ -284,7 +310,7 @@ func main() {
 
     shutdownCtx, cancel2 := context.WithTimeout(
         context.Background(),
-        10*time.Second,
+        10 * time.Second,
     )
     defer cancel2()
 
@@ -327,21 +353,29 @@ func runGenerator(
         case ts := <-ticker.C:
             // Generate Battery.Voltage and Temp.C
             v := 24.2
+
             switch pattern {
             case "step":
-                if i%50 < 25 { v = 24.2 } else { v = 23.3 } // low step to cross threshold 23.5
+                if i % 50 < 25 {
+                    v = 24.2
+                } else {
+                    // low step to cross threshold
+                    v = 23.3
+                }
             case "sine":
                 // simple low-frequency sine around 24
-                v = 24.0 + 0.8*mathSin(2*3.14159*float64(i)/100.0)
+                v = 24.0 + 0.8 * mathSin(2 * 3.14159 * float64(i) / 100.0)
             case "ramp":
-                v = 24.2 - float64((i%200))/100.0 // ramps down then wraps
+                // ramps down then wraps
+                v = 24.2 - float64((i % 200)) / 100.0
             case "noise":
                 v = 24.0 + (rnd.Float64()-0.5)*1.5
             }
+
             p1 := ingest.Point{Name: "Battery.Voltage", Value: v, Entity: "SC-1", TS: ts}
 
-            // Temperature: ramp up to trigger ROC
-            base := 20.0 + float64((ts.Sub(t0).Seconds()))*0.2 // 0.2 °C/s
+            // Temperature: ramp up to trigger ROC (0.2 °C/s)
+            base := 20.0 + float64((ts.Sub(t0).Seconds())) * 0.2
             temp := base + (rnd.Float64()-0.5)*0.1
             p2 := ingest.Point{Name: "Temp.C", Value: temp, Entity: "SC-1", TS: ts}
 
@@ -410,8 +444,8 @@ func registerPprof(mux *http.ServeMux) {
 // small local sine to avoid importing math just for one call
 func mathSin(x float64) float64 {
     // 5-term Taylor approximation
-    x3 := x*x*x
-    x5 := x3*x*x
+    x3 := x * x * x
+    x5 := x3 * x * x
 
     return x - x3/6 + x5/120
 }

@@ -16,7 +16,9 @@ type RuleRepository interface {
 type AlarmRepository interface {
     Create(ctx context.Context, a *domain.Alarm) error
     GetByID(ctx context.Context, id int64) (*domain.Alarm, error)
+    GetByRuleEntity(ctx context.Context, ruleID int64, entity string) (*domain.Alarm, error)
     List(ctx context.Context, limit int) ([]domain.Alarm, error)
+    Update(ctx context.Context, a *domain.Alarm) error
     CreateEvent(ctx context.Context, ev *domain.AlarmEvent) error
     ListEvents(ctx context.Context, alarmID int64) ([]domain.AlarmEvent, error)
 }

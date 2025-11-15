@@ -16,7 +16,18 @@ import (
 
 var ErrQueueFull = errors.New("ingest queue full")
 
-// Engine processes points against rules and emits traces.
+// EvalReport is emitted for each rule evaluation (used by alarm manager).
+type EvalReport struct {
+    RuleID int64
+    Signal string
+    Entity string
+    At     time.Time
+    Value  float64
+    Active bool
+    Latch  bool
+}
+
+// Engine processes points against rules and emits traces and reports.
 type Engine struct {
     logger  *slog.Logger
 
@@ -30,7 +41,11 @@ type Engine struct {
     state   map[stateKey]*ruleState
 
     trace   bool
-    traces  chan Trace // optional internal channel of evaluation events
+    // optional internal channel of evaluation events
+    traces  chan Trace
+
+    // always enabled; consumed by manager
+    reports chan EvalReport
 }
 
 type stateKey struct {
@@ -44,7 +59,7 @@ type Trace struct {
     Entity  string
     At      time.Time
     Value   float64
-    Active  bool   // current active status after evaluation (not persisted alarm)
+    Active  bool   // current state after evaluation
     Detail  string // human-readable note (trip/clear/hold)
 }
 
@@ -61,7 +76,7 @@ type DurationConfig struct {
     Op         string   `json:"op"` // ">" or "<"
     Threshold  float64  `json:"threshold"`
     DurationMs int64    `json:"duration_ms"`
-    Hysteresis float64  `json:"hysteresis,omitempty"` // for clear edge
+    Hysteresis float64  `json:"hysteresis,omitempty"` // for clear
 }
 
 type ROCConfig struct {
@@ -107,6 +122,7 @@ func New(rules []domain.Rule, queueSize, workers int, trace bool, logger *slog.L
         idx:     map[string][]*CompiledRule{},
         state:   map[stateKey]*ruleState{},
         trace:   trace,
+        reports: make(chan EvalReport, 2048),
     }
 
     if trace {
@@ -160,6 +176,11 @@ func (e *Engine) Enqueue(p ingest.Point) error {
     default:
         return ErrQueueFull
     }
+}
+
+// Reports returns a receive-only channel of evaluation results.
+func (e *Engine) Reports() <-chan EvalReport {
+    return e.reports
 }
 
 func (e *Engine) worker(ctx context.Context) {
@@ -256,6 +277,7 @@ func (e *Engine) evaluatePoint(p ingest.Point) {
 
         s.Active = activeAfter
 
+        // emit trace (optional)
         if e.trace {
             d := "hold"
             if !activeBefore && activeAfter {
@@ -276,6 +298,21 @@ func (e *Engine) evaluatePoint(p ingest.Point) {
                 Detail: d + ":" + detail,
             }
         }
+
+        // emit report (always)
+        select {
+        case e.reports <- EvalReport{
+            RuleID: cr.Rule.ID,
+            Signal: p.Name,
+            Entity: p.Entity,
+            At: p.TS,
+            Value: p.Value,
+            Active: activeAfter,
+            Latch: cr.Rule.Latch,
+        }:
+        default:
+            // drop if manager is too slow; we prefer liveness
+        }
     }
 }
 
@@ -289,7 +326,8 @@ func evalThreshold(cfg *ThresholdConfig, s *ruleState, p ingest.Point) (bool, st
         s.lastValue = v
         s.lastTime = p.TS
     } else if cfg.Deadband > 0 && math.Abs(v-s.lastValue) < cfg.Deadband {
-        v = s.lastValue // ignore minor changes
+        // ignore minor changes
+        v = s.lastValue
     } else {
         s.lastValue = v
         s.lastTime = p.TS
@@ -318,12 +356,16 @@ func evalThreshold(cfg *ThresholdConfig, s *ruleState, p ingest.Point) (bool, st
         case "lo":
             if cfg.Lo != nil {
                 thr := *cfg.Lo + cfg.Hysteresis
-                if v >= thr { clear = true }
+                if v >= thr {
+                    clear = true
+                }
             }
         case "hi":
             if cfg.Hi != nil {
                 thr := *cfg.Hi - cfg.Hysteresis
-                if v <= thr { clear = true }
+                if v <= thr {
+                    clear = true
+                }
             }
         }
     }
@@ -461,7 +503,8 @@ func evalROC(cfg *ROCConfig, s *ruleState, p ingest.Point) (bool, string) {
         return false, "deadband"
     }
 
-    rate := dv / dt // units per second
+    // units per second
+    rate := dv / dt
     val := rate
 
     if cfg.Abs && rate < 0 {

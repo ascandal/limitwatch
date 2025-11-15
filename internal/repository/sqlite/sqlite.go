@@ -5,6 +5,7 @@ import (
     "database/sql"
     "errors"
     "time"
+    "strings"
 
     "github.com/ascandal/limitwatch/internal/domain"
     "github.com/ascandal/limitwatch/internal/repository"
@@ -24,7 +25,6 @@ func New(db *sql.DB) *Repo {
 }
 
 // ----- Rules -----
-
 type ruleRepo struct{ db *sql.DB }
 
 func (r *ruleRepo) Create(ctx context.Context, rule *domain.Rule) error {
@@ -95,6 +95,7 @@ func (r *ruleRepo) List(ctx context.Context) ([]domain.Rule, error) {
     defer rows.Close()
 
     var out []domain.Rule
+
     for rows.Next() {
         var rule domain.Rule
         var cfg string
@@ -140,7 +141,6 @@ func scanRule(row *sql.Row) (*domain.Rule, error) {
 }
 
 // ----- Alarms -----
-
 type alarmRepo struct{ db *sql.DB }
 
 func (a *alarmRepo) Create(ctx context.Context, al *domain.Alarm) error {
@@ -184,6 +184,21 @@ func (a *alarmRepo) GetByID(ctx context.Context, id int64) (*domain.Alarm, error
         id,
     )
 
+    return scanAlarmRow(row)
+}
+
+func (a *alarmRepo) GetByRuleEntity(ctx context.Context, ruleID int64, entity string) (*domain.Alarm, error) {
+    row := a.db.QueryRowContext(
+        ctx,
+        `SELECT id, rule_id, entity, state, first_seen, last_seen, acked_by, silence_until, created_at, updated_at FROM alarms WHERE rule_id = ? AND entity = ?`,
+        ruleID,
+        entity,
+    )
+
+    return scanAlarmRow(row)
+}
+
+func scanAlarmRow(row *sql.Row) (*domain.Alarm, error) {
     var al domain.Alarm
     var firstSeen, lastSeen, silenceUntil sql.NullString
     var ackedBy sql.NullString
@@ -200,14 +215,17 @@ func (a *alarmRepo) GetByID(ctx context.Context, id int64) (*domain.Alarm, error
         t, _ := time.Parse(time.RFC3339Nano, firstSeen.String)
         al.FirstSeen = &t
     }
+
     if lastSeen.Valid {
         t, _ := time.Parse(time.RFC3339Nano, lastSeen.String)
         al.LastSeen = &t
     }
+
     if silenceUntil.Valid {
         t, _ := time.Parse(time.RFC3339Nano, silenceUntil.String)
         al.SilenceUntil = &t
     }
+
     if ackedBy.Valid {
         v := ackedBy.String
         al.AckedBy = &v
@@ -248,14 +266,17 @@ func (a *alarmRepo) List(ctx context.Context, limit int) ([]domain.Alarm, error)
             t, _ := time.Parse(time.RFC3339Nano, firstSeen.String)
             al.FirstSeen = &t
         }
+
         if lastSeen.Valid {
             t, _ := time.Parse(time.RFC3339Nano, lastSeen.String)
             al.LastSeen = &t
         }
+
         if silenceUntil.Valid {
             t, _ := time.Parse(time.RFC3339Nano, silenceUntil.String)
             al.SilenceUntil = &t
         }
+
         if ackedBy.Valid {
             v := ackedBy.String
             al.AckedBy = &v
@@ -267,6 +288,16 @@ func (a *alarmRepo) List(ctx context.Context, limit int) ([]domain.Alarm, error)
     return out, nil
 }
 
+func (a *alarmRepo) Update(ctx context.Context, al *domain.Alarm) error {
+    _, err := a.db.ExecContext(
+        ctx,
+        `UPDATE alarms SET state = ?, first_seen = ?, last_seen = ?, acked_by = ?, silence_until = ?, updated_at = ? WHERE id = ?`,
+        al.State, al.FirstSeen, al.LastSeen, al.AckedBy, al.SilenceUntil, al.UpdatedAt, al.ID,
+    )
+
+    return err
+}
+
 func (a *alarmRepo) CreateEvent(ctx context.Context, ev *domain.AlarmEvent) error {
     if ev.At.IsZero() {
         ev.At = time.Now().UTC()
@@ -275,12 +306,7 @@ func (a *alarmRepo) CreateEvent(ctx context.Context, ev *domain.AlarmEvent) erro
     res, err := a.db.ExecContext(
         ctx,
         `INSERT INTO alarm_events(alarm_id, type, actor, at, note, payload) VALUES (?, ?, ?, ?, ?, ?)`,
-        ev.AlarmID,
-        ev.Type,
-        ev.Actor,
-        ev.At,
-        ev.Note,
-        string(ev.Payload),
+        ev.AlarmID, ev.Type, ev.Actor, ev.At, ev.Note, string(ev.Payload),
     )
 
     if err != nil {
@@ -337,16 +363,5 @@ func boolToInt(b bool) int {
 // Basic detection for SQLite UNIQUE errors
 func isUniqueViolation(err error) bool {
     // modernc.org/sqlite returns errors with strings like "UNIQUE constraint failed"
-    return err != nil && errors.Is(err, sql.ErrNoRows) == false && stringsContains(err.Error(), "UNIQUE constraint failed")
-}
-
-// Small helper to avoid importing strings everywhere
-func stringsContains(s, sub string) bool {
-    for i := 0; i+len(sub) <= len(s); i++ {
-        if s[i:i+len(sub)] == sub {
-            return true
-        }
-    }
-
-    return false
+    return err != nil && !errors.Is(err, sql.ErrNoRows) && strings.Contains(err.Error(), "UNIQUE constraint failed")
 }
