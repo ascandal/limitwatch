@@ -74,7 +74,10 @@ func main() {
         os.Exit(1)
     }
 
-    defer db.Close()
+    defer storage.Close(db, func(err error) {
+        logger.Error("close database failed", "err", err)
+    })
+
     if err := storage.Migrate(context.Background(), db); err != nil {
         logger.Error("migrate failed", "err", err)
         os.Exit(1)
