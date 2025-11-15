@@ -133,6 +133,29 @@
 
 ---
 
+## Lint
+
+[Golangci-lint](https://golangci-lint.run/) is used for linting.
+
+[Install](https://golangci-lint.run/docs/welcome/install/) it globally from binaries:
+
+```bash
+# binary will be $(go env GOPATH)/bin/golangci-lint
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.6.2
+
+golangci-lint --version
+```
+
+[Configure](https://golangci-lint.run/docs/configuration/file/) it in file `.golangci.yml`.
+
+From the root directory run the linter:
+
+```bash
+golangci-lint run
+```
+
+---
+
 ## Current configuration (common env vars)
 - **Server:** PORT (default 8080), PPROF_ENABLED (default false)
 - **DB:** DB_DSN (default file:limitwatch.db?... with WAL & busy timeout)
