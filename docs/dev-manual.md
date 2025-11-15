@@ -89,7 +89,7 @@ Install the tool binaries at the pinned versions
 
 ```zsh
 go install golang.org/x/tools/cmd/goimports@$(go list -f '{{.Version}}' -m golang.org/x/tools)
-go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(go list -f '{{.Version}}' -m github.com/golangci/golangci-lint)
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@$(go list -f '{{.Version}}' -m github.com/golangci/golangci-lint/v2)
 go install gotest.tools/gotestsum@$(go list -f '{{.Version}}' -m gotest.tools/gotestsum)
 go install golang.org/x/vuln/cmd/govulncheck@$(go list -f '{{.Version}}' -m golang.org/x/vuln)
 ```
