@@ -150,7 +150,7 @@ task vuln
 task run
 ```
 
-- Executes `go run ./cmd/app`. (Assumes your main is under cmd/app.)
+- Executes `go run ./cmd/alarmd`.
 
 #### Build a slim binary:
 
