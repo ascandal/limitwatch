@@ -1,0 +1,46 @@
+# yaml-language-server: $schema=https://json.schemastore.org/golangci-lint.json
+
+# Configuration version. For golangci-lint v2.x the only valid value is "2".
+version: "2"
+
+run:
+  # Stop after this time.
+  timeout: 3m
+  # Also run on test files.
+  tests: true
+
+linters:
+  # We keep the default set ("standard") and explicitly enable some extras.
+  enable:
+    - govet         # Go's vet checks
+    - staticcheck   # powerful correctness checks
+    - ineffassign   # unused assignments
+    - errcheck      # unchecked errors
+    - gocritic      # extra correctness/style
+    - unused        # unused vars/funcs/etc
+    - misspell      # spelling mistakes
+
+  # Exclusions in v2 live under linters.exclusions (not issues.exclude-*).
+  exclusions:
+    # Paths are analyzed, but issues from them are not reported.
+    paths:
+      - "vendor/"
+
+    # Rules = per-path/per-linter/per-text exclusions.
+    rules:
+      # It’s OK to ignore Encode/Write errors when writing HTTP responses in this project.
+      - linters:
+          - errcheck
+        text: 'Error return value of .*(json\.NewEncoder\(.*\)\.Encode|w\.Write)\(.*\) is not checked'
+        path: 'cmd/|internal/'
+
+      # Allow _ = <call> patterns used intentionally to drop errors (e.g., response writes).
+      - linters:
+          - errcheck
+        text: '^_ = '
+
+      # Reduce false positives in tests.
+      - path: _test\.go
+        linters:
+          - errcheck
+          - stylecheck

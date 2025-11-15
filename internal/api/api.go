@@ -276,18 +276,18 @@ func (a *API) handleAlarmOps(w http.ResponseWriter, r *http.Request) {
 
         var until time.Time
 
-        if in.Until != "" {
+        switch {
+        case in.Until != "":
             t, err := time.Parse(time.RFC3339, in.Until)
 
             if err != nil {
                 http.Error(w, "bad until", http.StatusBadRequest)
                 return
             }
-
             until = t.UTC()
-        } else if in.TTL > 0 {
+        case in.TTL > 0:
             until = time.Now().UTC().Add(time.Duration(in.TTL) * time.Second)
-        } else {
+        default:
             http.Error(w, "ttl_sec or until required", http.StatusBadRequest)
             return
         }

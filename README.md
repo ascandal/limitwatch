@@ -133,6 +133,40 @@
 
 ---
 
+## E2E Tests
+
+The End-to-End tests spins up real binaries (alarmctl, alarmd) against a temp SQLite DB, exercises the JWT‑protected REST API, ingests points, verifies the alarm FSM, and checks ack/silence/clear.
+
+> Additional tests should extend coverage for auth, latched vs. unlatched, and queue behavior.
+
+> Note about dynamic rules: the current alarmd loads rules only at startup. So for E2E tests we create rules before starting the server (using alarmctl). That’s why the M3 flow below seeds the rule first, then boots alarmd.
+
+
+---
+
+## Lint
+
+[Golangci-lint](https://golangci-lint.run/) is used for linting.
+
+[Install](https://golangci-lint.run/docs/welcome/install/) it globally from binaries:
+
+```bash
+# binary will be $(go env GOPATH)/bin/golangci-lint
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh | sh -s -- -b $(go env GOPATH)/bin v2.6.2
+
+golangci-lint --version
+```
+
+[Configure](https://golangci-lint.run/docs/configuration/file/) it in file `.golangci.yml`.
+
+From the root directory run the linter:
+
+```bash
+golangci-lint run
+```
+
+---
+
 ## Current configuration (common env vars)
 - **Server:** PORT (default 8080), PPROF_ENABLED (default false)
 - **DB:** DB_DSN (default file:limitwatch.db?... with WAL & busy timeout)

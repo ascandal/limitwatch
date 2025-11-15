@@ -40,6 +40,18 @@ func Open(dsn string) (*sql.DB, error) {
     return db, nil
 }
 
+// Close closes the database and calls onErr if an error occurs.
+// onErr may be nil, in which case the error is ignored.
+func Close(db *sql.DB, onErr func(error)) {
+    if db == nil {
+        return
+    }
+
+    if err := db.Close(); err != nil && onErr != nil {
+        onErr(err)
+    }
+}
+
 //go:embed migrations/*.sql
 var migrationsFS embed.FS
 
