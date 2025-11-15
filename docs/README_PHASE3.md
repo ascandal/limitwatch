@@ -37,8 +37,8 @@ Milestone M3: **post rule → ingest points → see alarm → ack/clear via API*
 1) Start server (migrations auto-run):
    ```bash
    export JWT_SECRET="devsecret"   # enable JWT
-   go run ./cmd/jwtgen -sub ops@vast -role admin -secret "$JWT_SECRET" -exp 1h > admin.jwt
-   go run ./cmd/jwtgen -sub ops@vast -role operator -secret "$JWT_SECRET" -exp 1h > operator.jwt
+   go run ./cmd/jwtgen -sub ops@org_name -role admin -secret "$JWT_SECRET" -exp 1h > admin.jwt
+   go run ./cmd/jwtgen -sub ops@org_name -role operator -secret "$JWT_SECRET" -exp 1h > operator.jwt
    TRACE_ENABLED=true GEN_ENABLED=true GEN_PATTERN=step GEN_RATE_HZ=10 GEN_SEED=42          go run ./cmd/alarmd
    ```
 

@@ -41,6 +41,7 @@ import (
     "github.com/ascandal/limitwatch/internal/engine"
     "github.com/ascandal/limitwatch/internal/ingest"
     "github.com/ascandal/limitwatch/internal/manager"
+    "github.com/ascandal/limitwatch/internal/repository"
     "github.com/ascandal/limitwatch/internal/repository/sqlite"
     "github.com/ascandal/limitwatch/internal/storage"
     "github.com/ascandal/limitwatch/internal/version"
@@ -82,6 +83,7 @@ func main() {
     logger.Info("database ready", "dsn", dsn)
 
     repo := sqlite.New(db)
+    repos := repository.Repositories{Rules: repo.Rules, Alarms: repo.Alarms}
     rules, err := repo.Rules.List(context.Background())
 
     if err != nil {
@@ -108,7 +110,7 @@ func main() {
     eng.Start(ctx)
 
     // Start the manager.
-    mgr := manager.New(repo.Repositories, logger)
+    mgr := manager.New(repos, logger)
     mgr.Start(ctx, eng.Reports())
 
     // Optional deterministic generator for demo
@@ -264,7 +266,7 @@ func main() {
         logger.Warn("JWT disabled (JWT_SECRET empty); all API calls allowed as admin (dev mode).")
     }
 
-    api.New(repo.Repositories, mgr, jwtSecret, logger).Routes(mux)
+    api.New(repos, mgr, jwtSecret, logger).Routes(mux)
 
     if config.BoolEnv("PPROF_ENABLED", false) {
         registerPprof(mux)
