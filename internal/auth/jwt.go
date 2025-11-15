@@ -25,7 +25,7 @@ var (
 
 // ParseAndValidateHS256 validates a JWT signed with HS256 and returns Claims.
 func ParseAndValidateHS256(token string, secret []byte) (*Claims, error) {
-    parts = strings.Split(token, ".")
+    parts := strings.Split(token, ".")
 
     if len(parts) != 3 {
         return nil, ErrBadToken

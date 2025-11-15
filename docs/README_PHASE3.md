@@ -25,9 +25,11 @@ Milestone M3: **post rule → ingest points → see alarm → ack/clear via API*
 
 - Set `JWT_SECRET` to enable JWT checks. Without it, **dev mode** allows all as admin (warning logged).
 - Use `cmd/jwtgen` to create tokens:
+
   ```bash
   go run ./cmd/jwtgen -sub you@host -role operator -secret "$JWT_SECRET" -exp 1h
   ```
+
   Then call APIs with `Authorization: Bearer <token>`.
 
 ## Quick demo (M3)
