@@ -50,6 +50,13 @@ import (
 const defaultPort = "8080"
 
 func main() {
+    if err := run(); err != nil {
+        fmt.Fprintln(os.Stderr, err)
+        os.Exit(1)
+    }
+}
+
+func run() error {
     // ----- Logging setup -----
     logger := slog.New(
         slog.NewJSONHandler(
@@ -71,7 +78,7 @@ func main() {
     db, err := storage.Open(dsn)
     if err != nil {
         logger.Error("open database failed", "err", err, "dsn", dsn)
-        os.Exit(1)
+        return fmt.Errorf("open database failed: %w", err)
     }
 
     defer storage.Close(db, func(err error) {
@@ -80,7 +87,7 @@ func main() {
 
     if err := storage.Migrate(context.Background(), db); err != nil {
         logger.Error("migrate failed", "err", err)
-        os.Exit(1)
+        return fmt.Errorf("migrate failed: %w", err)
     }
 
     logger.Info("database ready", "dsn", dsn)
@@ -91,7 +98,7 @@ func main() {
 
     if err != nil {
         logger.Error("list rules failed", "err", err)
-        os.Exit(1)
+        return fmt.Errorf("list rules failed: %w", err)
     }
 
     logger.Info("rules loaded", "count", len(rules))
@@ -105,7 +112,7 @@ func main() {
 
     if err != nil {
         logger.Error("engine init failed", "err", err)
-        os.Exit(1)
+        return fmt.Errorf("engine init failed: %w", err)
     }
 
     ctx, cancel := context.WithCancel(context.Background())
@@ -214,7 +221,11 @@ func main() {
             return
         }
 
-        defer r.Body.Close()
+        defer func() {
+            if err := r.Body.Close(); err != nil {
+                logger.Warn("close request body failed", "err", err)
+            }
+        }()
 
         // Try array first
         var pts []ingest.Point
@@ -297,7 +308,6 @@ func main() {
 
         if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
             logger.Error("server error", "err", err)
-            os.Exit(1)
         }
     }()
 
@@ -320,9 +330,11 @@ func main() {
     logger.Info("shutting down")
     if err := srv.Shutdown(shutdownCtx); err != nil {
         logger.Error("graceful shutdown failed", "err", err)
-        os.Exit(1)
+        return fmt.Errorf("graceful shutdown failed: %w", err)
     }
     logger.Info("shutdown complete")
+
+    return nil
 }
 
 // -------------------------------------

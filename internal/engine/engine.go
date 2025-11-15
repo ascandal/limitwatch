@@ -322,13 +322,14 @@ func evalThreshold(cfg *ThresholdConfig, s *ruleState, p ingest.Point) (bool, st
     // Apply deadband to incoming value for minor noise
     v := p.Value
 
-    if s.lastTime.IsZero() {
+    switch {
+    case s.lastTime.IsZero():
         s.lastValue = v
         s.lastTime = p.TS
-    } else if cfg.Deadband > 0 && math.Abs(v-s.lastValue) < cfg.Deadband {
+    case cfg.Deadband > 0 && math.Abs(v-s.lastValue) < cfg.Deadband:
         // ignore minor changes
         v = s.lastValue
-    } else {
+    default:
         s.lastValue = v
         s.lastTime = p.TS
     }

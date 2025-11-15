@@ -33,6 +33,13 @@ Env:
 }
 
 func main() {
+    if err := run(); err != nil {
+        fmt.Fprintln(os.Stderr, err)
+        os.Exit(1)
+    }
+}
+
+func run() error {
     if len(os.Args) < 2 {
         usage()
     }
@@ -44,15 +51,13 @@ func main() {
 
     db, err := storage.Open(dsn)
     if err != nil {
-        fmt.Fprintln(os.Stderr, "open db:", err)
-        os.Exit(1)
+        return fmt.Errorf("open db: %w", err)
     }
 
     defer storage.Close(db, nil) // ignore close error
 
     if err := storage.Migrate(context.Background(), db); err != nil {
-        fmt.Fprintln(os.Stderr, "migrate:", err)
-        os.Exit(1)
+        return fmt.Errorf("migrate: %w", err)
     }
 
     repo := sqlite.New(db)
@@ -75,11 +80,10 @@ func main() {
             _ = fs.Parse(os.Args[3:])
 
             if *name == "" || *signal == "" {
-                fmt.Fprintln(os.Stderr, "name and signal are required")
-                os.Exit(1)
+                return fmt.Errorf("name and signal are required")
             }
 
-            var raw json.RawMessage = json.RawMessage(*cfgJSON)
+            raw := json.RawMessage(*cfgJSON)
             r := &domain.Rule{
                 Name:    *name,
                 Signal:  *signal,
@@ -91,8 +95,7 @@ func main() {
             }
 
             if err := repo.Rules.Create(context.Background(), r); err != nil {
-                fmt.Fprintln(os.Stderr, "create rule:", err)
-                os.Exit(1)
+                return fmt.Errorf("create rule: %w", err)
             }
 
             fmt.Printf("created rule id=%d name=%s\n", r.ID, r.Name)
@@ -101,8 +104,7 @@ func main() {
             rules, err := repo.Rules.List(context.Background())
 
             if err != nil {
-                fmt.Fprintln(os.Stderr, "list rules:", err)
-                os.Exit(1)
+                return fmt.Errorf("list rules: %w", err)
             }
 
             for _, r := range rules {
@@ -135,8 +137,7 @@ func main() {
             _ = fs.Parse(os.Args[3:])
 
             if *ruleID == 0 || *entity == "" {
-                fmt.Fprintln(os.Stderr, "rule-id and entity are required")
-                os.Exit(1)
+                return fmt.Errorf("rule-id and entity are required")
             }
 
             a := &domain.Alarm{
@@ -148,8 +149,7 @@ func main() {
             }
 
             if err := repo.Alarms.Create(context.Background(), a); err != nil {
-                fmt.Fprintln(os.Stderr, "create alarm:", err)
-                os.Exit(1)
+                return fmt.Errorf("create alarm: %w", err)
             }
 
             if strings.TrimSpace(*note) != "" {
@@ -162,7 +162,7 @@ func main() {
                 }
 
                 if err := repo.Alarms.CreateEvent(context.Background(), ev); err != nil {
-                    fmt.Fprintln(os.Stderr, "add event:", err); os.Exit(1)
+                    return fmt.Errorf("add event: %w", err)
                 }
             }
 
@@ -178,8 +178,7 @@ func main() {
             alarms, err := repo.Alarms.List(context.Background(), 100)
 
             if err != nil {
-                fmt.Fprintln(os.Stderr, "list alarms:", err)
-                os.Exit(1)
+                return fmt.Errorf("list alarms: %w", err)
             }
 
             for _, a := range alarms {
@@ -198,4 +197,6 @@ func main() {
     default:
         usage()
     }
+
+    return nil
 }

@@ -92,7 +92,7 @@ func (r *ruleRepo) List(ctx context.Context) ([]domain.Rule, error) {
         return nil, err
     }
 
-    defer rows.Close()
+    defer closeRows(rows)
 
     var out []domain.Rule
 
@@ -249,7 +249,7 @@ func (a *alarmRepo) List(ctx context.Context, limit int) ([]domain.Alarm, error)
         return nil, err
     }
 
-    defer rows.Close()
+    defer closeRows(rows)
 
     var out []domain.Alarm
 
@@ -330,7 +330,7 @@ func (a *alarmRepo) ListEvents(ctx context.Context, alarmID int64) ([]domain.Ala
         return nil, err
     }
 
-    defer rows.Close()
+    defer closeRows(rows)
 
     var out []domain.AlarmEvent
 
@@ -358,6 +358,10 @@ func boolToInt(b bool) int {
     }
 
     return 0
+}
+
+func closeRows(rows *sql.Rows) {
+    _ = rows.Close()
 }
 
 // Basic detection for SQLite UNIQUE errors
