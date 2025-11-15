@@ -10,7 +10,7 @@ package version
 // -X 'github.com/ascandal/limitwatch/internal/version.Commit=...'
 // -X 'github.com/ascandal/limitwatch/internal/version.Date=...'
 var (
-    Version = "dev"
-    Commit  = "none"
-    Date    = "unknown"
+	Version = "dev"
+	Commit  = "none"
+	Date    = "unknown"
 )
