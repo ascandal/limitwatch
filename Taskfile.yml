@@ -1,0 +1,21 @@
+version: "3"
+tasks:
+  fmt:
+    cmds:
+      - gofmt -s -w .
+      - goimports -w .
+  lint:
+    cmds:
+      - golangci-lint run
+  test:
+    cmds:
+      - gotestsum --format=short-verbose -- ./...
+  vuln:
+    cmds:
+      - govulncheck ./...
+  run:
+    cmds:
+      - go run ./cmd/app
+  build:
+    cmds:
+      - go build -trimpath -ldflags="-s -w" -o bin/app ./cmd/app

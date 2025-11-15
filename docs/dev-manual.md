@@ -57,6 +57,112 @@ LimitWatch/
 - CI pipeline (.github/workflows/ci.yml)
 
 
+## Tooling
+
+- `tools.go` pins CLI tool dependency versions.
+    - Blank imports (`_ "module/path"`) to declare dependencies on CLI tools.
+    - The tools build tag `//go:build tools tag` prevents the file from getting built into the app. It generates a durable list so `go.mod` can track the tool versions.
+- `Taskfile.yml` defines fast, cross‑platform commands to run locally and in CI.
+
+To add the Go bin directory to the shell PATH run:
+
+```zsh
+echo 'export PATH="$(go env GOPATH)/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
+
+Install the command runner (**Task**):
+[Github go-task](https://github.com/go-task/task)
+[Taskfile.dev](https://taskfile.dev/)
+
+```zsh
+npm install -g @go-task/cli
+```
+
+or
+
+```zsh
+go install github.com/go-task/task/v3/cmd/task@latest
+```
+
+Install the tool binaries at the pinned versions
+
+```zsh
+go install golang.org/x/tools/cmd/goimports@$(go list -f '{{.Version}}' -m golang.org/x/tools)
+go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(go list -f '{{.Version}}' -m github.com/golangci/golangci-lint)
+go install gotest.tools/gotestsum@$(go list -f '{{.Version}}' -m gotest.tools/gotestsum)
+go install golang.org/x/vuln/cmd/govulncheck@$(go list -f '{{.Version}}' -m golang.org/x/vuln)
+```
+
+Notes from install:
+
+```zsh
+# github.com/golangci/golangci-lint/cmd/golangci-lint
+ld: warning: -bind_at_load is deprecated on macOS
+```
+
+### Run the Dev Tools
+
+Run any of these commands from the root directory.
+
+#### List all tasks:
+
+```zsh
+task --list
+```
+
+#### Format (canonical style + imports):
+
+```zsh
+task fmt
+```
+
+- `gofmt -s -w .` rewrites code with Go’s standard formatting and simplifications.
+- `goimports -w .` does gofmt and fixes/organizes imports (adds/removes/sorts).
+
+#### Lint (static analysis):
+
+```zsh
+task lint
+```
+
+- Runs golangci-lint (a fast meta‑linter that aggregates many linters).
+
+#### Test (concise, readable output):
+
+```zsh
+task test
+```
+
+- `gotestsum --format=short-verbose -- ./...` runs all package tests and prints a compact per‑test summary.
+
+#### Vulnerability scan (supply‑chain + code paths):
+
+```zsh
+task vuln
+```
+
+- govulncheck consults Go’s vuln DB and reports reachable vulnerabilities, reducing false positives.
+
+#### Run the app:
+
+```zsh
+task run
+```
+
+- Executes `go run ./cmd/app`. (Assumes your main is under cmd/app.)
+
+#### Build a slim binary:
+
+```zsh
+task build
+```
+
+- `-trimpath` strips local paths from the binary for reproducibility.
+- `-ldflags="-s -w"` drops symbol & DWARF tables for smaller size.
+- Output goes to bin/app.
+
+
 ## Phase 1 — Core domain & storage
 
 - **Domain types**:
