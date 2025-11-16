@@ -46,10 +46,8 @@ type App struct {
 	logger *slog.Logger
 }
 
-// Sets up the application to be served with:
-//   - DB, repos, engine, manager, and HTTP mux.
-//
-// The returned App is ready to serve via httptest.NewServer(app.Handler).
+// Sets up the application with DB, repositories, engine, manager, and an HTTP mux.
+// The returned App is ready to be served via httptest.NewServer(app.Handler).
 func NewApp(parent context.Context, cfg Config, logger *slog.Logger) (*App, error) {
 	if logger == nil {
 		logger = slog.New(slog.NewJSONHandler(io.Discard, nil))
@@ -58,19 +56,15 @@ func NewApp(parent context.Context, cfg Config, logger *slog.Logger) (*App, erro
 	ctx, cancel := context.WithCancel(parent)
 
 	// --- DB open + migrations ---
-	// Start the server with a ready database.
-	// TODO: update core usage later.
 	db, err := storage.Open(cfg.DSN)
 	if err != nil {
 		cancel()
-		// logger.Error("open database failed", "err", err, "dsn", cfg.DNS)
 		return nil, fmt.Errorf("open database failed: %w", err)
 	}
 
 	if err := storage.Migrate(ctx, db); err != nil {
 		_ = db.Close()
 		cancel()
-		// logger.Error("migrate failed", "err", err)
 		return nil, fmt.Errorf("migrate failed: %w", err)
 	}
 
@@ -81,12 +75,10 @@ func NewApp(parent context.Context, cfg Config, logger *slog.Logger) (*App, erro
 
 	// --- Engine ---
 	rules, err := repos.Rules.List(ctx)
-	// rules, err := sql.Rules.List(context.Background())
 
 	if err != nil {
 		_ = db.Close()
 		cancel()
-		// logger.Error("list rules failed", "err", err)
 		return nil, fmt.Errorf("load rules failed: %w", err)
 	}
 
@@ -105,12 +97,9 @@ func NewApp(parent context.Context, cfg Config, logger *slog.Logger) (*App, erro
 	if err != nil {
 		_ = db.Close()
 		cancel()
-		// logger.Error("engine init failed", "err", err)
 		return nil, fmt.Errorf("engine init failed: %w", err)
 	}
 
-	// ctx, cancel := context.WithCancel(context.Background())
-	// defer cancel()
 	eng.Start(ctx)
 
 	// --- Manager ---

@@ -90,15 +90,10 @@ func run() error {
 		}
 	}()
 
-	// TODO: Not sure where this belongs or if still needed.
-	// defer storage.Close(db, func(err error) {
-	// 	logger.Error("close database failed", "err", err)
-	// })
-
 	// ----- HTTP server -----
 	srv := &http.Server{
 		Addr:    addr,
-		Handler: app.Handler, // mux,
+		Handler: app.Handler,
 		// Timeouts to protect against slowloris and resource exhaustion.
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
