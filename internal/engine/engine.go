@@ -1,3 +1,6 @@
+// Package engine evaluates telemetry points against configured rules and
+// produces in-memory state, trace logs, and evaluation reports for the
+// alarm manager.
 package engine
 
 import (
@@ -16,7 +19,8 @@ import (
 
 var ErrQueueFull = errors.New("ingest queue full")
 
-// EvalReport is emitted for each rule evaluation (used by alarm manager).
+// EvalReport is emitted for each rule evaluation and consumed by the alarm
+// manager to drive the persistent alarm finite-state machine.
 type EvalReport struct {
 	RuleID int64
 	Signal string
@@ -27,7 +31,7 @@ type EvalReport struct {
 	Latch  bool
 }
 
-// Engine processes points against rules and emits traces and reports.
+// Processes points against rules and emits traces and evaluation reports.
 type Engine struct {
 	logger *slog.Logger
 
@@ -53,6 +57,8 @@ type stateKey struct {
 	Entity string
 }
 
+// Represents an internal debug record of a single rule evaluation.
+// Written only when tracing is enabled.
 type Trace struct {
 	RuleID int64
 	Signal string
@@ -63,7 +69,12 @@ type Trace struct {
 	Detail string // human-readable note (trip/clear/hold)
 }
 
+// -------------------------------------
 // Rule configs
+// -------------------------------------
+
+// Configuration for a threshold rule (LO/HI) with optional
+// hysteresis, deadband, and duration.
 type ThresholdConfig struct {
 	Lo         *float64 `json:"lo,omitempty"`
 	Hi         *float64 `json:"hi,omitempty"`
@@ -72,6 +83,8 @@ type ThresholdConfig struct {
 	DurationMs int64    `json:"duration_ms,omitempty"`
 }
 
+// Configuration for a duration rule, which trips after a
+// condition has been true for a minimum duration.
 type DurationConfig struct {
 	Op         string  `json:"op"` // ">" or "<"
 	Threshold  float64 `json:"threshold"`
@@ -79,9 +92,11 @@ type DurationConfig struct {
 	Hysteresis float64 `json:"hysteresis,omitempty"` // for clear
 }
 
+// Configuration for a rate-of-change rule evaluated over a
+// sliding time window.
 type ROCConfig struct {
 	WindowMs int64   `json:"window_ms"`
-	GT       float64 `json:"gt"`                 // rate greater-than threshold (units per second)
+	GT       float64 `json:"gt"`                 // rate greater-than threshold (units per sec)
 	Abs      bool    `json:"abs"`                // use absolute value of rate
 	Deadband float64 `json:"deadband,omitempty"` // ignore tiny deltas
 }
@@ -106,6 +121,8 @@ type ruleState struct {
 	win []ingest.Point // sliding window, newest at end
 }
 
+// Constructs an Engine for the given rules, queue size, and worker count.
+// If queueSize or workers are <= 0, sensible defaults are applied.
 func New(rules []domain.Rule, queueSize, workers int, trace bool, logger *slog.Logger) (*Engine, error) {
 	if queueSize <= 0 {
 		queueSize = 1024
@@ -159,16 +176,21 @@ func New(rules []domain.Rule, queueSize, workers int, trace bool, logger *slog.L
 	return e, nil
 }
 
+// Launches worker goroutines that process points
+// until the context is canceled.
 func (e *Engine) Start(ctx context.Context) {
 	for i := 0; i < e.workers; i++ {
 		go e.worker(ctx)
 	}
 }
 
+// Returns the current number of points waiting in the ingest queue.
 func (e *Engine) QueueLen() int {
 	return len(e.queue)
 }
 
+// Submits a point for evaluation.
+// It returns ErrQueueFull if the bounded queue is at capacity.
 func (e *Engine) Enqueue(p ingest.Point) error {
 	select {
 	case e.queue <- p:
@@ -277,7 +299,7 @@ func (e *Engine) evaluatePoint(p ingest.Point) {
 
 		s.Active = activeAfter
 
-		// emit trace (optional)
+		// emit trace (optional; non-blocking to avoid impacting evaluation latency)
 		if e.trace {
 			d := "hold"
 			if !activeBefore && activeAfter {
@@ -288,7 +310,7 @@ func (e *Engine) evaluatePoint(p ingest.Point) {
 				d = "clear"
 			}
 
-			e.traces <- Trace{
+			t := Trace{
 				RuleID: cr.Rule.ID,
 				Signal: p.Name,
 				Entity: p.Entity,
@@ -296,6 +318,12 @@ func (e *Engine) evaluatePoint(p ingest.Point) {
 				Value:  p.Value,
 				Active: activeAfter,
 				Detail: d + ":" + detail,
+			}
+
+			select {
+			case e.traces <- t:
+			default:
+				// drop trace if the channel is full; traces are best-effort diagnostics
 			}
 		}
 
@@ -316,8 +344,12 @@ func (e *Engine) evaluatePoint(p ingest.Point) {
 	}
 }
 
-// --- Evaluation functions ---
+// -------------------------------------
+// Evaluation functions
+// -------------------------------------
 
+// Evaluates a threshold rule against the given point and updates
+// the rule state to account for hysteresis and duration.
 func evalThreshold(cfg *ThresholdConfig, s *ruleState, p ingest.Point) (bool, string) {
 	// Apply deadband to incoming value for minor noise
 	v := p.Value
@@ -411,6 +443,8 @@ func evalThreshold(cfg *ThresholdConfig, s *ruleState, p ingest.Point) (bool, st
 	return false, "idle"
 }
 
+// Evaluates a duration rule, which trips after the condition has
+// remained true for the configured minimum duration.
 func evalDuration(cfg *DurationConfig, s *ruleState, p ingest.Point) (bool, string) {
 	v := p.Value
 	cond := false
@@ -466,6 +500,7 @@ func evalDuration(cfg *DurationConfig, s *ruleState, p ingest.Point) (bool, stri
 	return false, "idle"
 }
 
+// Evaluates a rate-of-change (ROC) rule over a sliding time window.
 func evalROC(cfg *ROCConfig, s *ruleState, p ingest.Point) (bool, string) {
 	// Append new point and drop old points outside window
 	s.win = append(s.win, p)
