@@ -30,6 +30,7 @@ func New(repo repository.Repositories, logger *slog.Logger) *Manager {
 // is canceled or the reports channel is closed.
 func (m *Manager) Start(ctx context.Context, reports <-chan engine.EvalReport) {
 	go func() {
+		// Loop repeatedly until channel closed.
 		for {
 			select {
 			case <-ctx.Done():

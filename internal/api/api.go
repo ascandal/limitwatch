@@ -16,6 +16,8 @@ import (
 	"github.com/ascandal/limitwatch/internal/repository"
 )
 
+// Exposes HTTP handlers for rules and alarms, including JWT-based
+// authentication and role-based access control.
 type API struct {
 	repos       repository.Repositories
 	mgr         *manager.Manager
@@ -24,6 +26,7 @@ type API struct {
 	authEnabled bool
 }
 
+// Constructs an API with the given repositories, manager, JWT secret, and logger.
 func New(repos repository.Repositories, mgr *manager.Manager, jwtSecret []byte, logger *slog.Logger) *API {
 	return &API{
 		repos:       repos,
@@ -34,6 +37,7 @@ func New(repos repository.Repositories, mgr *manager.Manager, jwtSecret []byte, 
 	}
 }
 
+// Registers all API endpoints on the provided ServeMux.
 func (a *API) Routes(mux *http.ServeMux) {
 	mux.HandleFunc("/v1/rules", a.withAuth(a.handleRules))
 	mux.HandleFunc("/v1/alarms", a.withAuth(a.handleAlarms))
@@ -47,6 +51,8 @@ type ctxKey int
 
 const claimsKey ctxKey = 1
 
+// Wraps an HTTP handler with JWT-based authentication.
+// When JWT is disabled, it attaches a default admin claim for development use.
 func (a *API) withAuth(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if !a.authEnabled {
@@ -61,6 +67,10 @@ func (a *API) withAuth(next http.HandlerFunc) http.HandlerFunc {
 		hdr := r.Header.Get("Authorization")
 
 		if hdr == "" || !strings.HasPrefix(strings.ToLower(hdr), "bearer ") {
+			if a.logger != nil {
+				a.logger.Warn("missing bearer token", "path", r.URL.Path)
+			}
+
 			http.Error(w, "missing bearer token", http.StatusUnauthorized)
 
 			return
@@ -70,6 +80,10 @@ func (a *API) withAuth(next http.HandlerFunc) http.HandlerFunc {
 		c, err := auth.ParseAndValidateHS256(tok, a.jwtSecret)
 
 		if err != nil {
+			if a.logger != nil {
+				a.logger.Warn("invalid token", "path", r.URL.Path, "err", err)
+			}
+
 			http.Error(w, "invalid token", http.StatusUnauthorized)
 
 			return
@@ -80,6 +94,7 @@ func (a *API) withAuth(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// Extracts authentication claims from the request context.
 func getClaims(r *http.Request) *auth.Claims {
 	v := r.Context().Value(claimsKey)
 
@@ -94,6 +109,8 @@ func getClaims(r *http.Request) *auth.Claims {
 	return nil
 }
 
+// Checks that the caller's role is at least the given minimum.
+// If authorization fails, writes an HTTP error response and returns false.
 func requireRole(w http.ResponseWriter, r *http.Request, min string) bool {
 	c := getClaims(r)
 
@@ -124,6 +141,10 @@ func (a *API) handleRules(w http.ResponseWriter, r *http.Request) {
 		list, err := a.repos.Rules.List(r.Context())
 
 		if err != nil {
+			if a.logger != nil {
+				a.logger.Error("list rules failed", "err", err)
+			}
+
 			http.Error(w, "list rules failed", http.StatusInternalServerError)
 
 			return
@@ -170,6 +191,10 @@ func (a *API) handleRules(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			if a.logger != nil {
+				a.logger.Error("create rule failed", "err", err)
+			}
+
 			http.Error(w, "create failed", http.StatusInternalServerError)
 			return
 		}
@@ -200,6 +225,10 @@ func (a *API) handleAlarms(w http.ResponseWriter, r *http.Request) {
 		list, err := a.repos.Alarms.List(r.Context(), limit)
 
 		if err != nil {
+			if a.logger != nil {
+				a.logger.Error("list alarms failed", "err", err)
+			}
+
 			http.Error(w, "list alarms failed", http.StatusInternalServerError)
 
 			return
@@ -248,6 +277,10 @@ func (a *API) handleAlarmOps(w http.ResponseWriter, r *http.Request) {
 			if errors.Is(err, domain.ErrConflict) {
 				http.Error(w, "alarm inactive", http.StatusConflict)
 				return
+			}
+
+			if a.logger != nil {
+				a.logger.Error("ack failed", "err", err, "alarm", id)
 			}
 
 			http.Error(w, "ack failed", http.StatusInternalServerError)
@@ -301,6 +334,10 @@ func (a *API) handleAlarmOps(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
+			if a.logger != nil {
+				a.logger.Error("silence failed", "err", err, "alarm", id)
+			}
+
 			http.Error(w, "silence failed", http.StatusInternalServerError)
 			return
 		}
@@ -319,6 +356,10 @@ func (a *API) handleAlarmOps(w http.ResponseWriter, r *http.Request) {
 		actor := actorFrom(r)
 
 		if err := a.mgr.Clear(r.Context(), id, actor); err != nil {
+			if a.logger != nil {
+				a.logger.Error("clear failed", "err", err, "alarm", id)
+			}
+
 			http.Error(w, "clear failed", http.StatusInternalServerError)
 			return
 		}
@@ -329,6 +370,7 @@ func (a *API) handleAlarmOps(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+// Returns the subject from the JWT claims, or "unknown" if not present.
 func actorFrom(r *http.Request) string {
 	if c := getClaims(r); c != nil && c.Sub != "" {
 		return c.Sub
@@ -337,6 +379,7 @@ func actorFrom(r *http.Request) string {
 	return "unknown"
 }
 
+// Writes a JSON response with the given status code.
 func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(code)
@@ -344,6 +387,7 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
+// Small helper for returning a 405 response with an Allow header.
 func methodNotAllowed(w http.ResponseWriter, allow string) {
 	w.Header().Set("Allow", allow)
 	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
