@@ -46,7 +46,9 @@ type App struct {
 	logger *slog.Logger
 }
 
-// NewApp wires DB → repos → engine → manager → HTTP mux.
+// Sets up the application to be served with:
+//   - DB, repos, engine, manager, and HTTP mux.
+//
 // The returned App is ready to serve via httptest.NewServer(app.Handler).
 func NewApp(parent context.Context, cfg Config, logger *slog.Logger) (*App, error) {
 	if logger == nil {
@@ -55,29 +57,40 @@ func NewApp(parent context.Context, cfg Config, logger *slog.Logger) (*App, erro
 
 	ctx, cancel := context.WithCancel(parent)
 
-	// --- DB + migrations ---
+	// --- DB open + migrations ---
+	// Start the server with a ready database.
+	// TODO: update core usage later.
 	db, err := storage.Open(cfg.DSN)
 	if err != nil {
 		cancel()
-		return nil, fmt.Errorf("open db: %w", err)
+		// logger.Error("open database failed", "err", err, "dsn", cfg.DNS)
+		return nil, fmt.Errorf("open database failed: %w", err)
 	}
 
 	if err := storage.Migrate(ctx, db); err != nil {
 		_ = db.Close()
 		cancel()
-		return nil, fmt.Errorf("migrate: %w", err)
+		// logger.Error("migrate failed", "err", err)
+		return nil, fmt.Errorf("migrate failed: %w", err)
 	}
+
+	logger.Info("database ready", "dsn", cfg.DSN)
 
 	sql := sqlite.New(db)
 	repos := repository.Repositories{Rules: sql.Rules, Alarms: sql.Alarms}
 
 	// --- Engine ---
 	rules, err := repos.Rules.List(ctx)
+	// rules, err := sql.Rules.List(context.Background())
+
 	if err != nil {
 		_ = db.Close()
 		cancel()
-		return nil, fmt.Errorf("load rules: %w", err)
+		// logger.Error("list rules failed", "err", err)
+		return nil, fmt.Errorf("load rules failed: %w", err)
 	}
+
+	logger.Info("rules loaded", "count", len(rules))
 
 	if cfg.QueueSize <= 0 {
 		cfg.QueueSize = config.GetenvInt("INGEST_QUEUE_SIZE", 4096)
@@ -92,24 +105,33 @@ func NewApp(parent context.Context, cfg Config, logger *slog.Logger) (*App, erro
 	if err != nil {
 		_ = db.Close()
 		cancel()
-		return nil, fmt.Errorf("engine init: %w", err)
+		// logger.Error("engine init failed", "err", err)
+		return nil, fmt.Errorf("engine init failed: %w", err)
 	}
 
+	// ctx, cancel := context.WithCancel(context.Background())
+	// defer cancel()
 	eng.Start(ctx)
 
 	// --- Manager ---
 	mgr := manager.New(repos, logger)
 	mgr.Start(ctx, eng.Reports())
 
-	// --- HTTP mux ---
+	// --- HTTP routing mux ---
 	mux := http.NewServeMux()
 	registerCommonRoutes(mux, logger)
 	registerIngest(mux, eng, logger)
+
+	// Secure APIs (JWT)
+	if len(cfg.JWTSecret) == 0 {
+		logger.Warn("JWT disabled (JWT_SECRET empty); all API calls allowed as admin (dev mode).")
+	}
 
 	api.New(repos, mgr, cfg.JWTSecret, logger).Routes(mux)
 
 	if cfg.EnablePprof {
 		registerPprof(mux)
+		logger.Info("pprof enabled (dev only)", "paths", "/debug/pprof/*")
 	}
 
 	return &App{
@@ -124,7 +146,7 @@ func NewApp(parent context.Context, cfg Config, logger *slog.Logger) (*App, erro
 	}, nil
 }
 
-// Close cancels workers and closes the DB.
+// Cancels workers and closes the DB.
 func (a *App) Close(ctx context.Context) error {
 	a.cancel()
 
@@ -139,9 +161,12 @@ func (a *App) Close(ctx context.Context) error {
 	return a.db.Close()
 }
 
-// Helpers -------------------------------------------------------------
+// -------------------------------------
+// Local helpers for safety and clarity.
+// -------------------------------------
 
 func registerCommonRoutes(mux *http.ServeMux, logger *slog.Logger) {
+	// Health (GET/HEAD only)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if !allowMethods(w, r, http.MethodGet, http.MethodHead) {
 			return
@@ -151,6 +176,7 @@ func registerCommonRoutes(mux *http.ServeMux, logger *slog.Logger) {
 		writeText(w, http.StatusOK, "ok")
 	})
 
+	// Readiness (GET/HEAD only)
 	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		if !allowMethods(w, r, http.MethodGet, http.MethodHead) {
 			return
@@ -160,6 +186,7 @@ func registerCommonRoutes(mux *http.ServeMux, logger *slog.Logger) {
 		writeText(w, http.StatusOK, "ready")
 	})
 
+	// Version (uses encoding/json for correctness and escaping)
 	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		if !allowMethods(w, r, http.MethodGet, http.MethodHead) {
 			return
@@ -182,6 +209,7 @@ func registerCommonRoutes(mux *http.ServeMux, logger *slog.Logger) {
 		writeJSON(w, http.StatusOK, payload)
 	})
 
+	// Basic root info
 	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if !allowMethods(w, r, http.MethodGet, http.MethodHead) {
 			return
@@ -194,13 +222,18 @@ func registerCommonRoutes(mux *http.ServeMux, logger *slog.Logger) {
 }
 
 func registerIngest(mux *http.ServeMux, eng *engine.Engine, logger *slog.Logger) {
+	// Telemetry point injection (single or multiple points)
 	mux.HandleFunc("/v1/ingest", func(w http.ResponseWriter, r *http.Request) {
 		if !allowMethods(w, r, http.MethodPost) {
 			return
 		}
 
 		if ct := r.Header.Get("Content-Type"); ct != "" && !strings.Contains(ct, "application/json") {
-			http.Error(w, "content-type must be application/json", http.StatusUnsupportedMediaType)
+			http.Error(
+				w,
+				"content-type must be application/json",
+				http.StatusUnsupportedMediaType,
+			)
 			return
 		}
 
@@ -217,9 +250,11 @@ func registerIngest(mux *http.ServeMux, eng *engine.Engine, logger *slog.Logger)
 			}
 		}()
 
+		// First try array of points.
 		var pts []ingest.Point
 
 		if err := json.Unmarshal(body, &pts); err != nil {
+			// Try single point.
 			var one ingest.Point
 
 			if err2 := json.Unmarshal(body, &one); err2 != nil {
@@ -233,7 +268,11 @@ func registerIngest(mux *http.ServeMux, eng *engine.Engine, logger *slog.Logger)
 		n := 0
 		for i := range pts {
 			if err := pts[i].Normalize(); err != nil {
-				http.Error(w, fmt.Sprintf("invalid point at index %d: %v", i, err), http.StatusBadRequest)
+				http.Error(
+					w,
+					fmt.Sprintf("invalid point at index %d: %v", i, err),
+					http.StatusBadRequest,
+				)
 				return
 			}
 
@@ -267,13 +306,21 @@ func allowMethods(w http.ResponseWriter, r *http.Request, methods ...string) boo
 	}
 
 	w.Header().Set("Allow", strings.Join(methods, ", "))
-	http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+	http.Error(
+		w,
+		http.StatusText(http.StatusMethodNotAllowed),
+		http.StatusMethodNotAllowed,
+	)
 
 	return false
 }
 
-func noStore(w http.ResponseWriter) { w.Header().Set("Cache-Control", "no-store") }
+// Marks responses as non-cacheable.
+func noStore(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store")
+}
 
+// Writes a plain text response with status code.
 func writeText(w http.ResponseWriter, status int, msg string) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.WriteHeader(status)
@@ -281,6 +328,7 @@ func writeText(w http.ResponseWriter, status int, msg string) {
 	_, _ = w.Write([]byte(msg))
 }
 
+// Writes a JSON response with status code.
 func writeJSON(w http.ResponseWriter, status int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
 	w.WriteHeader(status)
@@ -288,6 +336,7 @@ func writeJSON(w http.ResponseWriter, status int, v any) {
 	_ = json.NewEncoder(w).Encode(v)
 }
 
+// Registers standard pprof handlers under /debug/pprof/.
 func registerPprof(mux *http.ServeMux) {
 	mux.HandleFunc("/debug/pprof/", pprof.Index)
 	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
