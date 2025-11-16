@@ -1,6 +1,37 @@
 # Authentication
 
-Below is a thorough explanation of how authentication and authorization work in the application, centered on **JWT** and how it is wired through the HTTP API, the alarm manager, and the rest of the system.
+Authentication and authorization are centered on **JWT** and is wired through the HTTP API and the alarm manager.
+
+## Model
+- **JWT (HS256)** with claims: `sub` (subject), `role` (`viewer|operator|admin`), optional `exp`.
+- **Header**: `Authorization: Bearer <token>`.
+
+## Modes
+- **Dev mode** (default): `JWT_SECRET` unset → auth disabled; all calls act as admin.
+- **Auth mode**: `JWT_SECRET` set → tokens required; role checks enforced.
+
+## Roles
+- **viewer**: read‑only (e.g., list rules/alarms)
+- **operator**: ack/silence/clear
+- **admin**: create rules
+
+## Endpoints & roles (summary)
+- `GET /v1/rules` → viewer+
+- `POST /v1/rules` → admin
+- `GET /v1/alarms` → viewer+
+- `POST /v1/alarms/{id}/(ack|silence|clear)` → operator+
+- `POST /v1/ingest` → open (for now)
+
+## Generate a token
+
+```bash
+export JWT_SECRET="your-strong-secret"
+go run ./cmd/jwtgen -sub ops@example -role operator -secret "$JWT_SECRET" -exp 1h > operator.jwt
+```
+
+Parser behavior (internal)
+- Verifies alg (HS256), signature (HMAC‑SHA256), and exp (if present).
+- Unknown roles default to lowest precedence.
 
 ---
 

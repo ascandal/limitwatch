@@ -1,6 +1,19 @@
 # Development Roadmap
-Below is a **tight design document and development plan** for **LimitWatch**.
-**Real‑Time Limits, Alarms & Runbook Actioner**
+
+## Phases & milestones
+- **P0 – Scaffold (M0):** CI, basic server (/healthz), Docker/Helm skeleton.
+- **P1 – Core & Storage (M1):** Domain (Rule/Alarm/Event), SQLite + migrations, repos, CLI.
+- **P2 – Ingest & Engine (M2):** /v1/ingest, bounded queue, threshold/duration/ROC + tests.
+- **P3 – Manager & API (M3):** Eval → FSM (active/acked/silenced/cleared), rules/alarms REST, JWT roles.
+- **P4 – Actions & Reliability (M4):** Webhooks with retries & DLQ; correlation IDs.
+- **P5 – Observability & Ops (M5):** Prometheus metrics, Grafana panels, Docker/Helm polish.
+- **P6 – Polish & Docs (M6):** One‑command demo, walkthrough.
+
+## Key risks & mitigations (selected)
+- **Burst performance:** bounded queue, worker pool, pre‑compiled rules.
+- **Time semantics:** event time with small tolerance; document assumptions.
+- **Webhook noise:** latching + debounce; idempotency keys; backoff/DLQ.
+- **Concurrency bugs:** `-race` in CI; single‑writer for persistence.
 
 ---
 

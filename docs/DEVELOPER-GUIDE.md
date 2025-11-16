@@ -1,13 +1,12 @@
-# Development Manual
+# Developer Guide
 
-### Directory Structure
+## Directory Structure
 
 ```text
 LimitWatch/
 ├─ cmd/
-│  ├─ alarmd/                 # Service entrypoint (main.go)
-│  └─ alarmctl/
-├─ internal/version/           # Build-time version variables (ldflags)
+│  ├─ alarmd/                  # Service entrypoint (main.go)
+│  └─ alarmctl/                # developer/admin CLI for storage ops
 ├─ deploy/
 │  ├─ docker/Dockerfile        # Multi-stage → distroless:nonroot runtime
 │  └─ helm/
@@ -16,7 +15,23 @@ LimitWatch/
 │     └─ templates/
 │        ├─ deployment.yaml    # Deployment + probes
 │        └─ service.yaml       # ClusterIP Service
+├─ docs/
 ├─ grafana/README.md           # Placeholder (dashboards come in Phase 5)
+├─ internal/
+│  ├─ api/
+│  ├─ auth/
+│  ├─ config/
+│  ├─ domain/
+│  ├─ engine/
+│  ├─ generator/
+│  ├─ ingest/
+│  ├─ manager/
+│  ├─ repository/
+│  ├─ server/
+│  ├─ storage/
+│  └─ version/                 # Build-time version variables (ldflags)
+├─ tests/
+│  └─ e2e/
 ├─ .github/workflows/ci.yml    # CI: fmt, vet, staticcheck, test -race, build
 ├─ Makefile                    # Common tasks (build/run/docker/etc.)
 ├─ go.mod                      # Module path
@@ -25,13 +40,53 @@ LimitWatch/
 └─ README.md                   # Quick start
 ```
 
-- The server (cmd/alarmd/main.go)
-- Build‑time versioning (internal/version + ldflags)
-- Logging
-    - Uses `slog.NewJSONHandler` → clean, structured JSON logs.
-    - Startup log includes addr, version, and commit.
-    - Error logs include `"err": "<message>"` field.
-- CI pipeline (.github/workflows/ci.yml)
+## Tooling
+- **Go** 1.22+
+- **golangci‑lint** v2.x (config in `.golangci.yml`)
+- **gofumpt** + **goimports**
+
+## Install toolchain and run:
+
+```bash
+go mod tidy
+golangci-lint run
+go test ./...
+```
+
+## Lint & format
+
+```bash
+gofumpt -w .
+goimports -w .
+golangci-lint run
+```
+
+## Testing
+- Unit tests: engine rule logic (threshold, duration, ROC).
+- E2E (httptest): seeds DB, starts in‑proc server, ingests points, verifies alarm FSM.
+
+```bash
+go test -v ./tests/e2e -run TestE2E_Httptest_M3
+# Optional
+go test -race ./...
+```
+
+## Local run
+
+```bash
+go run ./cmd/alarmd
+curl -sf localhost:8080/healthz
+```
+
+## Notes for contributors
+- Structured logs via slog (JSON).
+- Strict error handling (check/propagate; avoid swallowing).
+- Graceful shutdown and HTTP timeouts are in place.
+
+
+
+
+
 
 
 ## Tooling
