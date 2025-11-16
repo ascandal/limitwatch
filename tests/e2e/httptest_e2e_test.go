@@ -57,7 +57,7 @@ func TestE2E_Httptest_M3(t *testing.T) {
 			Name:     "BatteryLow",
 			Signal:   "Battery.Voltage",
 			Type:     domain.RuleThreshold,
-			Severity: domain.Warn,
+			Severity: domain.Severity("warn"),
 			Latch:    true,
 			Enabled:  true,
 			Config:   cfg,
