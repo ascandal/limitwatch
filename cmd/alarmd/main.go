@@ -95,18 +95,6 @@ func run() error {
 	// 	logger.Error("close database failed", "err", err)
 	// })
 
-	// TODO: this is where the previous version enabled the generator.
-	// // Optional deterministic generator for demo
-	// if config.BoolEnv("GEN_ENABLED", false) {
-	// 	seed := int64(config.GetenvInt("GEN_SEED", 42))
-	// 	rate := time.Duration(config.GetenvInt("GEN_RATE_HZ", 10))
-	// 	pattern := config.Getenv("GEN_PATTERN", "step") // step|sine|ramp|noise
-
-	// 	go runGenerator(ctx, eng, seed, pattern, rate, logger)
-
-	// 	logger.Info("generator enabled", "pattern", pattern, "rate_hz", rate, "seed", seed)
-	// }
-
 	// ----- HTTP server -----
 	srv := &http.Server{
 		Addr:    addr,
