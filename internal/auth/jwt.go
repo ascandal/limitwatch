@@ -1,3 +1,5 @@
+// Package auth provides minimal JWT parsing and role helpers for protecting
+// the HTTP API.
 package auth
 
 import (
@@ -10,21 +12,29 @@ import (
 	"time"
 )
 
-// Claims is a minimal JWT claim set we use for demo auth.
+// Minimal JWT claim set used by the API layer. It intentionally
+// models only the fields needed by this service.
 type Claims struct {
 	Sub  string `json:"sub"`
 	Role string `json:"role"`          // viewer|operator|admin
 	Exp  int64  `json:"exp,omitempty"` // unix seconds
 }
 
+// Common errors returned by ParseAndValidateHS256.
 var (
 	ErrBadToken = errors.New("invalid token")
 	ErrExpired  = errors.New("token expired")
 	ErrAlg      = errors.New("unsupported alg")
 )
 
-// ParseAndValidateHS256 validates a JWT signed with HS256 and returns Claims.
+// Validates a compact JWT signed with HS256 using the
+// provided secret and returns the parsed Claims.
+// It verifies the signature, algorithm, and expiration time (if present).
 func ParseAndValidateHS256(token string, secret []byte) (*Claims, error) {
+	if len(secret) == 0 {
+		return nil, ErrBadToken
+	}
+
 	parts := strings.Split(token, ".")
 
 	if len(parts) != 3 {
@@ -84,11 +94,13 @@ func ParseAndValidateHS256(token string, secret []byte) (*Claims, error) {
 	return &c, nil
 }
 
+// Decodes a base64url-encoded string without padding.
 func b64urlDecode(s string) ([]byte, error) {
 	return base64.RawURLEncoding.DecodeString(s)
 }
 
-// RoleOrder defines role precedence (viewer < operator < admin)
+// Defines role precedence (viewer < operator < admin). Unknown roles
+// return 0 and are treated as having the lowest precedence.
 func RoleOrder(r string) int {
 	switch strings.ToLower(r) {
 	case "admin":
