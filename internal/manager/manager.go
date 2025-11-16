@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"log/slog"
@@ -11,7 +12,7 @@ import (
 	"github.com/ascandal/limitwatch/internal/repository"
 )
 
-// Manager consumes engine evaluation reports and updates persistent alarms.
+// Consumes engine evaluation reports and updates persistent alarms.
 type Manager struct {
 	repo   repository.Repositories
 	logger *slog.Logger
@@ -20,20 +21,29 @@ type Manager struct {
 	// (optional for now; not used)
 }
 
+// Creates a Manager backed by the provided repositories and logger.
 func New(repo repository.Repositories, logger *slog.Logger) *Manager {
 	return &Manager{repo: repo, logger: logger}
 }
 
+// Launches a goroutine that consumes evaluation reports until the context
+// is canceled or the reports channel is closed.
 func (m *Manager) Start(ctx context.Context, reports <-chan engine.EvalReport) {
 	go func() {
 		for {
 			select {
 			case <-ctx.Done():
 				return
-			case r := <-reports:
-				if (r == engine.EvalReport{}) {
+			case r, ok := <-reports:
+				if !ok {
+					// Channel closed: nothing more to process.
+					return
+				}
+
+				if r == (engine.EvalReport{}) {
 					continue
 				}
+
 				m.handleReport(ctx, r)
 			}
 		}
@@ -45,7 +55,7 @@ func (m *Manager) handleReport(ctx context.Context, r engine.EvalReport) {
 	al, err := m.repo.Alarms.GetByRuleEntity(ctx, r.RuleID, r.Entity)
 	now := r.At
 
-	if err == domain.ErrNotFound || al == nil {
+	if errors.Is(err, domain.ErrNotFound) || al == nil {
 		if r.Active {
 			// Create new active alarm
 			a := &domain.Alarm{
@@ -63,12 +73,18 @@ func (m *Manager) handleReport(ctx context.Context, r engine.EvalReport) {
 				return
 			}
 
-			_ = m.repo.Alarms.CreateEvent(ctx, &domain.AlarmEvent{
+			if err := m.repo.Alarms.CreateEvent(ctx, &domain.AlarmEvent{
 				AlarmID: a.ID, Type: domain.EventActivated, Actor: "engine", At: r.At,
-			})
+			}); err != nil {
+				m.logger.Error(
+					"create alarm event failed",
+					"err", err, "alarm", a.ID, "type", domain.EventActivated,
+				)
+			}
 
 			return
 		}
+
 		// inactive & not found -> nothing to do
 		return
 	} else if err != nil {
@@ -94,9 +110,14 @@ func (m *Manager) handleReport(ctx context.Context, r engine.EvalReport) {
 				return
 			}
 
-			_ = m.repo.Alarms.CreateEvent(ctx, &domain.AlarmEvent{
+			if err := m.repo.Alarms.CreateEvent(ctx, &domain.AlarmEvent{
 				AlarmID: al.ID, Type: domain.EventActivated, Actor: "engine", At: r.At,
-			})
+			}); err != nil {
+				m.logger.Error(
+					"create alarm event failed", "err",
+					err, "alarm", al.ID, "type", domain.EventActivated,
+				)
+			}
 
 			return
 		}
@@ -128,14 +149,24 @@ func (m *Manager) handleReport(ctx context.Context, r engine.EvalReport) {
 			return
 		}
 
-		_ = m.repo.Alarms.CreateEvent(ctx, &domain.AlarmEvent{
+		if err := m.repo.Alarms.CreateEvent(ctx, &domain.AlarmEvent{
 			AlarmID: al.ID, Type: domain.EventCleared, Actor: "engine", At: r.At,
-		})
+		}); err != nil {
+			m.logger.Error(
+				"create alarm event failed",
+				"err", err, "alarm", al.ID, "type", domain.EventCleared,
+			)
+		}
 	}
 }
 
+// ------------------------------
 // Ops helpers used by API
+// ------------------------------
 
+// Marks the alarm as acknowledged.
+// It is idempotent: if the alarm is already in the Acked state, no change occurs.
+// Returns ErrConflict if the alarm is inactive.
 func (m *Manager) Ack(ctx context.Context, alarmID int64, actor string) error {
 	al, err := m.repo.Alarms.GetByID(ctx, alarmID)
 
@@ -154,17 +185,20 @@ func (m *Manager) Ack(ctx context.Context, alarmID int64, actor string) error {
 
 	al.State = domain.Acked
 	al.AckedBy = &actor
-	al.UpdatedAt = time.Now().UTC()
+	now := time.Now().UTC()
+	al.UpdatedAt = now
 
 	if err := m.repo.Alarms.Update(ctx, al); err != nil {
 		return err
 	}
 
 	return m.repo.Alarms.CreateEvent(ctx, &domain.AlarmEvent{
-		AlarmID: al.ID, Type: domain.EventAcked, Actor: actor, At: time.Now().UTC(),
+		AlarmID: al.ID, Type: domain.EventAcked, Actor: actor, At: now,
 	})
 }
 
+// Moves the alarm to the Silenced state until the given time.
+// Returns ErrConflict if the alarm is inactive.
 func (m *Manager) Silence(ctx context.Context, alarmID int64, until time.Time, actor string) error {
 	al, err := m.repo.Alarms.GetByID(ctx, alarmID)
 
@@ -178,7 +212,8 @@ func (m *Manager) Silence(ctx context.Context, alarmID int64, until time.Time, a
 
 	al.State = domain.Silenced
 	al.SilenceUntil = &until
-	al.UpdatedAt = time.Now().UTC()
+	now := time.Now().UTC()
+	al.UpdatedAt = now
 
 	if err := m.repo.Alarms.Update(ctx, al); err != nil {
 		return err
@@ -187,10 +222,12 @@ func (m *Manager) Silence(ctx context.Context, alarmID int64, until time.Time, a
 	payload := []byte(`{"until":"` + until.UTC().Format(time.RFC3339Nano) + `"}`)
 
 	return m.repo.Alarms.CreateEvent(ctx, &domain.AlarmEvent{
-		AlarmID: al.ID, Type: domain.EventSilenced, Actor: actor, At: time.Now().UTC(), Payload: payload,
+		AlarmID: al.ID, Type: domain.EventSilenced, Actor: actor, At: now, Payload: payload,
 	})
 }
 
+// Moves the alarm to the Inactive state.
+// It is idempotent: clearing an already inactive alarm is a no-op.
 func (m *Manager) Clear(ctx context.Context, alarmID int64, actor string) error {
 	al, err := m.repo.Alarms.GetByID(ctx, alarmID)
 
@@ -205,13 +242,14 @@ func (m *Manager) Clear(ctx context.Context, alarmID int64, actor string) error 
 	al.State = domain.Inactive
 	al.SilenceUntil = nil
 	al.AckedBy = nil
-	al.UpdatedAt = time.Now().UTC()
+	now := time.Now().UTC()
+	al.UpdatedAt = now
 
 	if err := m.repo.Alarms.Update(ctx, al); err != nil {
 		return err
 	}
 
 	return m.repo.Alarms.CreateEvent(ctx, &domain.AlarmEvent{
-		AlarmID: al.ID, Type: domain.EventCleared, Actor: actor, At: time.Now().UTC(),
+		AlarmID: al.ID, Type: domain.EventCleared, Actor: actor, At: now,
 	})
 }

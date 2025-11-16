@@ -43,3 +43,5 @@ Workers that consume points from the queue, evaluate rules, and track active/not
 
 ### Migrations
 Versioned SQL changes that bootstrap and evolve the DB schema.
+
+### FSM
