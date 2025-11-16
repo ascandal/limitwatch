@@ -8,17 +8,17 @@
 - Production‑style scaffolding: Docker, Helm, migrations, structured logs, timeouts, graceful shutdown.
 
 ## Implemented
-- Phase 0 — Scaffold (M0 ✅)
+- Phase 0 - Scaffold (M0 ✅)
     - Minimal HTTP server (alarmd) with `/healthz`, `/readyz`, `/version`, optional `/debug/pprof/*` (gated).
     - JSON structured logging (slog), graceful shutdown, timeouts.
     - Multi‑stage Dockerfile (distroless, non‑root) and Helm skeleton (probes wired).
-    - CI workflow prepared (`fmt/vet/staticcheck/tests/build`) — you chose to keep CI off for now.
-- Phase 1 — Core domain & storage (M1 ✅)
+    - CI workflow prepared (`fmt/vet/staticcheck/tests/build`) - you chose to keep CI off for now.
+- Phase 1 - Core domain & storage (M1 ✅)
     - Domain types: Rule, Alarm, AlarmEvent with enums and sentinel errors.
     - Storage: embedded SQL migrations, SQLite (CGO‑free) as default DB via database/sql.
     - Repository layer: interfaces + SQLite impl (create/list/get for rules/alarms; events create/list).
     - Temporary CLI (`alarmctl`) to create/list rules and alarms (developer/admin tool to exercise storage).
-- Phase 2 — Ingest path & rule engine (M2 ✅)
+- Phase 2 - Ingest path & rule engine (M2 ✅)
     - POST `/v1/ingest` endpoint (accepts object or array of points), validation, size‑limited body.
     - Bounded ingest queue (non‑blocking enqueue; returns 503 when full).
     - Rule engine with per‑rule/per‑entity state:
@@ -27,9 +27,9 @@
     - ROC (rate‑of‑change) over a sliding window (absolute or signed), optional deadband.
     - Deterministic generator (optional) to produce realistic streams for demo and reproducibility.
     - Unit tests for rule logic (threshold, duration, ROC).
+- Phase 3 - Alarm Manager & API
 
-### Not yet built (Phase‑3+)
-- alarm FSM persistence & API (ack/silence/clear)
+### Not yet built (Phase‑4+)
 - runbook actions/webhooks
 - metrics dashboards (Grafana)
 - auth/JWT plumbing for APIs

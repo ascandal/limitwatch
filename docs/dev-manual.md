@@ -1,28 +1,5 @@
 # Development Manual
 
-## Phase-0 - Project Scaffold
-- A minimal HTTP service (binary: alarmd) exposing:
-    - **GET /healthz** – liveness
-    - **GET /readyz** – readiness
-    - **GET /version** – build metadata (version/commit/date)
-    - **GET /debug/pprof/*** – profiling endpoints
-- Graceful shutdown on SIGINT/SIGTERM with a 10‑second timeout.
-- JSON logging via Go’s slog.
-- CI pipeline (GitHub Actions):
-    - format check
-    - vet
-    - static analysis (staticcheck)
-    - go test -race
-    - build
-- Container image (multi‑stage, distroless, non‑root).
-- Helm chart skeleton (Deployment/Service, probes wired up).
-- Other
-    - MIT license
-    - .gitignore
-    - Makefile
-    - placeholders for Grafana/Helm.
-
-
 ### Directory Structure
 
 ```text
