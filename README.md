@@ -135,12 +135,49 @@
 
 ## E2E Tests
 
+File: `tests/e2e/httptest_e2e_test.go`
+
+What this test covers:
+- DB migrations + rule loading at app startup
+- JWT middleware (admin/operator roles)
+- /v1/ingest (valid JSON array, timestamps)
+- Engine → Manager → Repository path (rule trip, ACTIVE alarm)
+- Alarm ops: ack, silence, clear
+- Final state: alarm ends INACTIVE (latched rule → requires clear)
+
 The End-to-End tests spins up real binaries (alarmctl, alarmd) against a temp SQLite DB, exercises the JWT‑protected REST API, ingests points, verifies the alarm FSM, and checks ack/silence/clear.
+
+No environment variables are required for this test. It creates a temp DB, sets JWTSecret in server.Config, and runs entirely in‑process.
 
 > Additional tests should extend coverage for auth, latched vs. unlatched, and queue behavior.
 
-> Note about dynamic rules: the current alarmd loads rules only at startup. So for E2E tests we create rules before starting the server (using alarmctl). That’s why the M3 flow below seeds the rule first, then boots alarmd.
+> Note about dynamic rules:
+> alarmd loads rules only at startup. So E2E tests creates rules before starting the server (using alarmctl). That’s why the flow below seeds the rule first, then boots alarmd.
 
+### Run the e2e test alone:
+
+```zsh
+go test -v ./tests/e2e -run TestE2E_Httptest_M3
+```
+
+### Run with the race detector (recommended locally/CI):
+
+```zsh
+go test -race -v ./tests/e2e -run TestE2E_Httptest_M3
+```
+
+### Add a Make target (optional):
+
+```yml
+e2e:
+	go test -v ./tests/e2e -run TestE2E_Httptest_M3
+```
+
+Then:
+
+```zsh
+make e2e
+```
 
 ---
 

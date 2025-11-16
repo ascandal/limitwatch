@@ -1,5 +1,6 @@
 /*
-Package main provides the LimitWatch server entrypoint.
+Provides the LimitWatch server entrypoint using the in-process
+server constructor in internal/server/app.go.
 
 Key behaviors:
   - Uses stdlib http.ServeMux (no external router yet).
@@ -21,29 +22,16 @@ package main
 
 import (
 	"context"
-	"encoding/json"
-	"errors"
 	"fmt"
-	"io"
 	"log/slog"
-	"math/rand"
 	"net/http"
-	"net/http/pprof"
 	"os"
 	"os/signal"
-	"runtime"
-	"strings"
 	"syscall"
 	"time"
 
-	"github.com/ascandal/limitwatch/internal/api"
 	"github.com/ascandal/limitwatch/internal/config"
-	"github.com/ascandal/limitwatch/internal/engine"
-	"github.com/ascandal/limitwatch/internal/ingest"
-	"github.com/ascandal/limitwatch/internal/manager"
-	"github.com/ascandal/limitwatch/internal/repository"
-	"github.com/ascandal/limitwatch/internal/repository/sqlite"
-	"github.com/ascandal/limitwatch/internal/storage"
+	"github.com/ascandal/limitwatch/internal/server"
 	"github.com/ascandal/limitwatch/internal/version"
 )
 
@@ -67,229 +55,45 @@ func run() error {
 	// Uncomment for all packages to use logger via slog.Default():
 	// slog.SetDefault(logger)
 
-	// ----- DB open + migrations -----
-	// Start the server with a ready database.
-	// TODO: update core usage later.
+	// ----- Server config HTTP routing (env-driven) -----
+	port := config.Getenv("PORT", defaultPort)
+	addr := ":" + port
+
 	dsn := config.Getenv(
 		"DB_DSN",
 		"file:limitwatch.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)&_pragma=synchronous(NORMAL)",
 	)
 
-	db, err := storage.Open(dsn)
-	if err != nil {
-		logger.Error("open database failed", "err", err, "dsn", dsn)
-		return fmt.Errorf("open database failed: %w", err)
+	cfg := server.Config{
+		DSN:         dsn,
+		JWTSecret:   []byte(config.Getenv("JWT_SECRET", "")),
+		QueueSize:   config.GetenvInt("INGEST_QUEUE_SIZE", 4096),
+		Workers:     config.GetenvInt("WORKERS", 0), // 0 -> default inside server.NewApp
+		Trace:       config.BoolEnv("TRACE_ENABLED", false),
+		EnablePprof: config.BoolEnv("PPROF_ENABLED", false),
 	}
 
-	defer storage.Close(db, func(err error) {
-		logger.Error("close database failed", "err", err)
-	})
-
-	if err := storage.Migrate(context.Background(), db); err != nil {
-		logger.Error("migrate failed", "err", err)
-		return fmt.Errorf("migrate failed: %w", err)
-	}
-
-	logger.Info("database ready", "dsn", dsn)
-
-	repo := sqlite.New(db)
-	repos := repository.Repositories{Rules: repo.Rules, Alarms: repo.Alarms}
-	rules, err := repo.Rules.List(context.Background())
-
-	if err != nil {
-		logger.Error("list rules failed", "err", err)
-		return fmt.Errorf("list rules failed: %w", err)
-	}
-
-	logger.Info("rules loaded", "count", len(rules))
-
-	// ----- Engine + Manager setup -----
-	qsize := config.GetenvInt("INGEST_QUEUE_SIZE", 4096)
-	workers := config.GetenvInt("WORKERS", runtime.NumCPU())
-	trace := config.BoolEnv("TRACE_ENABLED", false)
-
-	eng, err := engine.New(rules, qsize, workers, trace, logger)
-
-	if err != nil {
-		logger.Error("engine init failed", "err", err)
-		return fmt.Errorf("engine init failed: %w", err)
-	}
-
+	// ----- Build app (DB -> repos -> engine -> manager -> mux) -----
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	eng.Start(ctx)
 
-	// Start the manager.
-	mgr := manager.New(repos, logger)
-	mgr.Start(ctx, eng.Reports())
+	app, err := server.NewApp(ctx, cfg, logger)
 
-	// Optional deterministic generator for demo
-	if config.BoolEnv("GEN_ENABLED", false) {
-		seed := int64(config.GetenvInt("GEN_SEED", 42))
-		rate := time.Duration(config.GetenvInt("GEN_RATE_HZ", 10))
-		pattern := config.Getenv("GEN_PATTERN", "step") // step|sine|ramp|noise
-
-		go runGenerator(ctx, eng, seed, pattern, rate, logger)
-
-		logger.Info("generator enabled", "pattern", pattern, "rate_hz", rate, "seed", seed)
+	if err != nil {
+		logger.Error("initialize app failed", "err", err)
+		return fmt.Errorf("initialize app: %w", err)
 	}
 
-	// ----- HTTP routing -----
-	port := config.Getenv("PORT", defaultPort)
-	addr := ":" + port
-
-	mux := http.NewServeMux()
-
-	// Health (GET/HEAD only)
-	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
-		if !allowMethods(w, r, http.MethodGet, http.MethodHead) {
-			return
+	defer func() {
+		if cerr := app.Close(context.Background()); cerr != nil {
+			logger.Error("app close failed", "err", cerr)
 		}
+	}()
 
-		noStore(w)
-		writeText(w, http.StatusOK, "ok")
-	})
-
-	// Readiness (GET/HEAD only)
-	mux.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
-		if !allowMethods(w, r, http.MethodGet, http.MethodHead) {
-			return
-		}
-
-		noStore(w)
-		writeText(w, http.StatusOK, "ready")
-	})
-
-	// Version (uses encoding/json for correctness/escaping)
-	mux.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
-		if !allowMethods(w, r, http.MethodGet, http.MethodHead) {
-			return
-		}
-
-		noStore(w)
-
-		payload := struct {
-			Service string `json:"service"`
-			Version string `json:"version"`
-			Commit  string `json:"commit"`
-			Date    string `json:"date"`
-		}{
-			Service: "alarmd",
-			Version: version.Version,
-			Commit:  version.Commit,
-			Date:    version.Date,
-		}
-
-		writeJSON(w, http.StatusOK, payload)
-	})
-
-	// Basic root info
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if !allowMethods(w, r, http.MethodGet, http.MethodHead) {
-			return
-		}
-
-		noStore(w)
-
-		writeText(
-			w,
-			http.StatusOK,
-			"LimitWatch alarmd up. See /healthz, /readyz, /version, /v1/ingest, /v1/rules, /v1/alarms. Enable /debug/pprof/* via PPROF_ENABLED=true",
-		)
-	})
-
-	// Telemetry point injection (single or multiple points)
-	mux.HandleFunc("/v1/ingest", func(w http.ResponseWriter, r *http.Request) {
-		if !allowMethods(w, r, http.MethodPost) {
-			return
-		}
-
-		if ct := r.Header.Get("Content-Type"); ct != "" && !strings.Contains(ct, "application/json") {
-			http.Error(
-				w,
-				"content-type must be application/json",
-				http.StatusUnsupportedMediaType,
-			)
-
-			return
-		}
-
-		body, err := io.ReadAll(io.LimitReader(r.Body, 1<<20)) // 1MB limit
-
-		if err != nil {
-			http.Error(w, "read body failed", http.StatusBadRequest)
-			return
-		}
-
-		defer func() {
-			if err := r.Body.Close(); err != nil {
-				logger.Warn("close request body failed", "err", err)
-			}
-		}()
-
-		// Try array first
-		var pts []ingest.Point
-
-		if err := json.Unmarshal(body, &pts); err != nil {
-			// Try single object
-			var one ingest.Point
-			if err2 := json.Unmarshal(body, &one); err2 != nil {
-				http.Error(w, "invalid JSON: expected object or array", http.StatusBadRequest)
-				return
-			}
-
-			pts = []ingest.Point{one}
-		}
-
-		n := 0
-		for i := range pts {
-			if err := pts[i].Normalize(); err != nil {
-				http.Error(
-					w,
-					fmt.Sprintf("invalid point at index %d: %v", i, err),
-					http.StatusBadRequest,
-				)
-
-				return
-			}
-
-			if err := eng.Enqueue(pts[i]); err != nil {
-				if errors.Is(err, engine.ErrQueueFull) {
-					w.Header().Set("X-Queue-Len", fmt.Sprintf("%d", eng.QueueLen()))
-					http.Error(w, "queue full", http.StatusServiceUnavailable)
-
-					return
-				}
-
-				http.Error(w, "enqueue failed", http.StatusInternalServerError)
-
-				return
-			}
-
-			n++
-		}
-
-		w.Header().Set("X-Queue-Len", fmt.Sprintf("%d", eng.QueueLen()))
-		writeJSON(w, http.StatusAccepted, map[string]any{"ingested": n})
-	})
-
-	// Secure APIs (JWT)
-	jwtSecret := []byte(config.Getenv("JWT_SECRET", ""))
-
-	if len(jwtSecret) == 0 {
-		logger.Warn("JWT disabled (JWT_SECRET empty); all API calls allowed as admin (dev mode).")
-	}
-
-	api.New(repos, mgr, jwtSecret, logger).Routes(mux)
-
-	if config.BoolEnv("PPROF_ENABLED", false) {
-		registerPprof(mux)
-		logger.Info("pprof enabled (development only)", "paths", "/debug/pprof/*")
-	}
-
+	// ----- HTTP server -----
 	srv := &http.Server{
 		Addr:    addr,
-		Handler: mux,
+		Handler: app.Handler,
 		// Timeouts to protect against slowloris and resource exhaustion.
 		ReadTimeout:       10 * time.Second,
 		ReadHeaderTimeout: 5 * time.Second,
@@ -335,131 +139,4 @@ func run() error {
 	logger.Info("shutdown complete")
 
 	return nil
-}
-
-// -------------------------------------
-// Local helpers for safety and clarity.
-// -------------------------------------
-
-func runGenerator(
-	ctx context.Context,
-	eng *engine.Engine,
-	seed int64,
-	pattern string,
-	rateHz time.Duration,
-	logger *slog.Logger,
-) {
-	// rateHz is number of ticks per second (as int in env)
-	if rateHz <= 0 {
-		rateHz = 10
-	}
-
-	ticker := time.NewTicker(time.Second / rateHz)
-	defer ticker.Stop()
-
-	rnd := rand.New(rand.NewSource(seed))
-	t0 := time.Now().UTC()
-	var i int64 = 0
-
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case ts := <-ticker.C:
-			// Generate Battery.Voltage and Temp.C
-			v := 24.2
-
-			switch pattern {
-			case "step":
-				if i%50 < 25 {
-					v = 24.2
-				} else {
-					// low step to cross threshold
-					v = 23.3
-				}
-			case "sine":
-				// simple low-frequency sine around 24
-				v = 24.0 + 0.8*mathSin(2*3.14159*float64(i)/100.0)
-			case "ramp":
-				// ramps down then wraps
-				v = 24.2 - float64((i%200))/100.0
-			case "noise":
-				v = 24.0 + (rnd.Float64()-0.5)*1.5
-			}
-
-			p1 := ingest.Point{Name: "Battery.Voltage", Value: v, Entity: "SC-1", TS: ts}
-
-			// Temperature: ramp up to trigger ROC (0.2 °C/s)
-			base := 20.0 + float64((ts.Sub(t0).Seconds()))*0.2
-			temp := base + (rnd.Float64()-0.5)*0.1
-			p2 := ingest.Point{Name: "Temp.C", Value: temp, Entity: "SC-1", TS: ts}
-
-			if err := eng.Enqueue(p1); err != nil {
-				logger.Warn("generator enqueue failed", "err", err)
-			}
-
-			if err := eng.Enqueue(p2); err != nil {
-				logger.Warn("generator enqueue failed", "err", err)
-			}
-
-			i++
-		}
-	}
-}
-
-func allowMethods(w http.ResponseWriter, r *http.Request, methods ...string) bool {
-	m := r.Method
-	for _, allowed := range methods {
-		if m == allowed {
-			return true
-		}
-	}
-
-	w.Header().Set("Allow", strings.Join(methods, ", "))
-	http.Error(
-		w,
-		http.StatusText(http.StatusMethodNotAllowed),
-		http.StatusMethodNotAllowed,
-	)
-
-	return false
-}
-
-// Marks responses as non-cacheable.
-func noStore(w http.ResponseWriter) {
-	w.Header().Set("Cache-Control", "no-store")
-}
-
-// writeText writes a plain text response with status code.
-func writeText(w http.ResponseWriter, status int, msg string) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(status)
-
-	_, _ = w.Write([]byte(msg))
-}
-
-// writeJSON writes a JSON response with status code.
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-
-	_ = json.NewEncoder(w).Encode(v)
-}
-
-// registerPprof registers standard pprof handlers under /debug/pprof/.
-func registerPprof(mux *http.ServeMux) {
-	mux.HandleFunc("/debug/pprof/", pprof.Index)
-	mux.HandleFunc("/debug/pprof/cmdline", pprof.Cmdline)
-	mux.HandleFunc("/debug/pprof/profile", pprof.Profile)
-	mux.HandleFunc("/debug/pprof/symbol", pprof.Symbol)
-	mux.HandleFunc("/debug/pprof/trace", pprof.Trace)
-}
-
-// small local sine to avoid importing math just for one call
-func mathSin(x float64) float64 {
-	// 5-term Taylor approximation
-	x3 := x * x * x
-	x5 := x3 * x * x
-
-	return x - x3/6 + x5/120
 }
