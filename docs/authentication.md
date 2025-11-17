@@ -20,7 +20,7 @@ Authentication and authorization are centered on **JWT** and is wired through th
 - `POST /v1/rules` → admin
 - `GET /v1/alarms` → viewer+
 - `POST /v1/alarms/{id}/(ack|silence|clear)` → operator+
-- `POST /v1/ingest` → open (for now)
+- `POST /v1/ingest` → open
 
 ## Generate a token
 

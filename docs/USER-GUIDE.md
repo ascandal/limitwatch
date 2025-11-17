@@ -65,8 +65,8 @@ The engine loads rules at startup. Rules created after startup (via API) take ef
 | POST `/v1/rules`               | admin     | Create a rule. Takes JSON payload with rule config.                 |
 | GET `/v1/alarms`               | viewer+   | List alarms (active/acked/silenced/inactive).                       |
 | POST `/v1/alarms/{id}/ack`     | operator+ | Acknowledge an alarm.                                               |
-| POST `/v1/alarms/{id}/silence` | operator+ | Silence an alarm until time or TTL.                                          |
-| POST `/v1/alarms/{id}/clear`   | operator+ | Clear an alarm (needed for latched alarms).                                  |
+| POST `/v1/alarms/{id}/silence` | operator+ | Silence an alarm until time or TTL.                                 |
+| POST `/v1/alarms/{id}/clear`   | operator+ | Clear an alarm (needed for latched alarms).                         |
 | GET `/healthz`                 | open      | Liveness                                                            |
 | GET `/readyz`                  | open      | Readiness                                                           |
 | GET `/version`                 | open      | Build metadata (version/commit/date)                                |
