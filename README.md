@@ -131,13 +131,31 @@ Use them with:
 -H "authorization: Bearer $(cat operator.jwt)"
 ```
 
-## Optional: demo generator
+## Demo Generator (Optional)
 
-For quick demos you can enable a built‑in generator that feeds synthetic signals into the engine:
+For quick demos you can start a generator that sends synthetic signals (e.g., `Battery.Voltage`, `Temp.C`) to limitwatch.
+
+In a new console terminal run:
 
 ```bash
-GEN_ENABLED=true GEN_PATTERN=step GEN_RATE_HZ=10 GEN_SEED=42 TRACE_ENABLED=true \
-  go run ./cmd/alarmd
+go run ./cmd/alarmctl gen \
+  -url http://127.0.0.1:8080 \
+  -pattern step \
+  -rate 10 \
+  -entity SC-1 \
+  -v
+```
+
+If auth is enabled, run with `-token operator.jwt`:
+
+```bash
+go run ./cmd/alarmctl gen \
+  -url http://192.168.1.60:8080 \
+  -pattern step \
+  -rate 10 \
+  -entity SC-1 \
+  -token operator.jwt \
+  -v
 ```
 
 The generator produces simple patterns (`Battery.Voltage`, `Temp.C`) that exercise threshold and ROC rules.

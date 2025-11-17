@@ -1,12 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
+	"math"
+	"math/rand"
+	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/ascandal/limitwatch/internal/config"
@@ -18,12 +25,14 @@ import (
 func usage() {
 	fmt.Fprintf(
 		os.Stderr,
-		`alarmctl - temporary CLI for Phase 1 (rules & alarms)
+		`alarmctl - temporary CLI for rules, alarms, and test signal generation
+
 Usage:
   alarmctl rule create --name NAME --signal SIGNAL --type threshold --severity warn --latch [--config-json '{"lo":23.5,"hysteresis":0.2}']
   alarmctl rule list
   alarmctl alarm create --rule-id ID --entity ENTITY --state active
   alarmctl alarm list
+  alarmctl gen [flags]   # fake signal generator, see: alarmctl gen -h
 
 Env:
   DB_DSN   SQLite/Postgres DSN (default: file:limitwatch.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000))
@@ -194,9 +203,199 @@ func run() error {
 		default:
 			usage()
 		}
+	case "gen", "generator", "signalgen":
+		return runGen(os.Args[2:])
 	default:
 		usage()
 	}
 
 	return nil
+}
+
+// runGen starts a fake telemetry generator that POSTs points to /v1/ingest.
+// Usage:
+//
+//	alarmctl gen -url http://localhost:8080 -entity SC-1 -pattern step -rate 10 -seed 42 [-token operator.jwt] [-duration 1m]
+func runGen(args []string) error {
+	fs := flag.NewFlagSet("gen", flag.ContinueOnError)
+
+	baseURL := fs.String("url", "http://127.0.0.1:8080", "base URL of alarmd (e.g., http://127.0.0.1:8080)")
+	entity := fs.String("entity", "SC-1", "entity id/tag to annotate samples with")
+	pattern := fs.String("pattern", "step", "pattern: step|sine|ramp|noise")
+	rate := fs.Float64("rate", 10.0, "points per second (each tick sends 2 points: Battery.Voltage and Temp.C)")
+	seed := fs.Int64("seed", 42, "random seed for noise")
+	tokenPath := fs.String("token", "", "path to JWT file for Authorization header (optional)")
+	runFor := fs.Duration("duration", 0, "how long to run (0 = until Ctrl-C)")
+	verbose := fs.Bool("v", false, "verbose logs")
+
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+
+	if *rate <= 0 {
+		*rate = 10.0
+	}
+
+	period := time.Duration(float64(time.Second) / *rate)
+
+	target := strings.TrimRight(*baseURL, "/") + "/v1/ingest"
+
+	var bearer string
+
+	if *tokenPath != "" {
+		b, err := os.ReadFile(*tokenPath)
+
+		if err != nil {
+			return fmt.Errorf("read token: %w", err)
+		}
+
+		bearer = strings.TrimSpace(string(b))
+	}
+
+	type point struct {
+		Name   string  `json:"name"`
+		Value  float64 `json:"value"`
+		Entity string  `json:"entity"`
+	}
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	ticker := time.NewTicker(period)
+
+	defer ticker.Stop()
+
+	ctx, cancel := signal.NotifyContext(
+		context.Background(), syscall.SIGINT, syscall.SIGTERM,
+	)
+
+	defer cancel()
+
+	var timeout <-chan time.Time
+
+	if *runFor > 0 {
+		timer := time.NewTimer(*runFor)
+		defer timer.Stop()
+		timeout = timer.C
+	}
+
+	rnd := rand.New(rand.NewSource(*seed))
+	start := time.Now()
+	var i int64
+
+	logf := func(format string, args ...any) {
+		if *verbose {
+			fmt.Fprintf(os.Stderr, format+"\n", args...)
+		}
+	}
+
+	post := func(payload []byte) error {
+		req, err := http.NewRequest(
+			http.MethodPost, target, bytes.NewReader(payload),
+		)
+
+		if err != nil {
+			return err
+		}
+
+		req.Header.Set("Content-Type", "application/json")
+
+		if bearer != "" {
+			req.Header.Set("Authorization", "Bearer "+bearer)
+		}
+
+		resp, err := client.Do(req)
+
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			_, _ = io.Copy(io.Discard, resp.Body)
+			_ = resp.Body.Close()
+		}()
+
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			b, _ := io.ReadAll(resp.Body)
+
+			return fmt.Errorf(
+				"ingest %s: status=%d body=%s", target, resp.StatusCode, string(b),
+			)
+		}
+
+		return nil
+	}
+
+	logf(
+		"signal generator start: url=%s entity=%s pattern=%s rate=%.2fHz seed=%d",
+		target, *entity, *pattern, *rate, *seed,
+	)
+
+	for {
+		select {
+		case <-ctx.Done():
+			logf("signal generator: stop (signal)")
+			return nil
+		case <-timeout:
+			logf(
+				"signal generator: stop (duration %s)",
+				time.Since(start).Truncate(time.Millisecond),
+			)
+			return nil
+		case ts := <-ticker.C:
+			_ = ts // we don't currently use the timestamp directly
+
+			// Battery.Voltage
+			v := 24.2
+
+			switch *pattern {
+			case "step":
+				if i%50 < 25 {
+					v = 24.2
+				} else {
+					v = 23.3 // low step to cross threshold
+				}
+			case "sine":
+				// slow sine around 24.0
+				v = 24.0 + 0.8*math.Sin(2*math.Pi*float64(i)/100.0)
+			case "ramp":
+				// ramps down then wraps every ~20 seconds at 10Hz
+				v = 24.2 - float64((i%200))/100.0
+			case "noise":
+				v = 24.0 + (rnd.Float64()-0.5)*1.5
+			default:
+				// fall back to step if unknown
+				if i%50 < 25 {
+					v = 24.2
+				} else {
+					v = 23.3
+				}
+			}
+
+			// Temp.C with slight upward trend to exercise ROC
+			elapsed := time.Since(start).Seconds()
+			base := 20.0 + elapsed*0.2
+			temp := base + (rnd.Float64()-0.5)*0.1
+
+			pts := []point{
+				{Name: "Battery.Voltage", Value: v, Entity: *entity},
+				{Name: "Temp.C", Value: temp, Entity: *entity},
+			}
+
+			body, err := json.Marshal(pts)
+
+			if err != nil {
+				return fmt.Errorf("encode points: %w", err)
+			}
+
+			if err := post(body); err != nil {
+				logf("WARN: %v", err)
+			} else {
+				logf(
+					"tick=%d sent Battery.Voltage=%.3f Temp.C=%.3f entity=%s",
+					i, v, temp, *entity,
+				)
+			}
+
+			i++
+		}
+	}
 }

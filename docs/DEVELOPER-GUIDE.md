@@ -23,7 +23,6 @@ LimitWatch/
 │  ├─ config/
 │  ├─ domain/
 │  ├─ engine/
-│  ├─ generator/
 │  ├─ ingest/
 │  ├─ manager/
 │  ├─ repository/
