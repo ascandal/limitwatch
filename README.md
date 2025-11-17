@@ -1,13 +1,33 @@
 # LimitWatch - Real-Time Limits, Alarms & Runbook Actioner
 
-LimitWatch ingests telemetry, evaluates rules and manages alarms with a small, secure HTTP API. It’s a compact, production-style building block that can run on a laptop, VM, or Kubernetes.
+**LimitWatch** is a small and secure HTTP API **Go** service that ingests telemetry, evaluates configurable rules, raises alarms, manages their lifecycle, and triggers runbook actions.
 
-**Provides:**
-- **Near real-time detection** of out‑of‑limits conditions with bounded latency.
-    - Rules: threshold, duration, rate-of-change with hysteresis and latching
-- **Operational control**: ack/silence/clear with audit trail and roles.
-    - Alarm States: active → acked → silenced/cleared
-- **Simple integration**: HTTP ingest + minimal dependencies (SQLite by default).
+It’s a compact, production-style container that can be deployed on a laptop, VM, or Kubernetes.
+
+## Provides
+
+- **Near‑real‑time detection:** Fast and deterministic evaluation of out‑of‑limits conditions with bounded latency under bursty loads.
+    - **Configurable Rules:** threshold, duration, and rate-of-change (ROC) with hysteresis and latching.
+- **Operational control:** Alarm state lifecycle with role‑based access and full auditability.
+    - active → acked (acknowledged) → silenced/cleared
+- **Reliable automation:** Idempotent webhooks with retries, backoff, and dead‑letter handling reduce noisy or lost actions.
+- **Easy integration & visibility:** Simple HTTP ingest, /metrics for Grafana dashboards, and minimal dependencies (SQLite/Postgres).
+
+## Representative Use Cases
+
+In mission‑critical environments (e.g., spacecraft ground operations), minutes matter. LimitWatch reduces **time‑to‑detect** and **time‑to‑act**, enforces consistent responses, and provides the traceability operations teams need during reviews and anomaly investigations. It serves as a guardrail for human error and a foundation for higher‑level automation.
+
+- **Spacecraft Operations:**
+    - Trip an alarm when **battery voltage** drops below a safe threshold with hysteresis to avoid flap.
+    - Detect **thermal runaway** using rate‑of‑change rules; auto‑notify the on‑call channel.
+    - Monitor **pressurization** parameters that must remain out‑of‑bounds for N seconds before tripping.
+
+- **Ground Systems:**
+    - Alert on **downlink gap** duration or **packet loss** spikes; trigger a playbook to switch antennas or increase buffering.
+    - Watch **service health** (latency, queue depth) and open a ticket automatically when limits are exceeded.
+
+- **General Operations:**
+    - Evaluate sensor streams on test stands or hardware‑in‑the‑loop rigs and execute standard operating procedures on excursions.
 
 ## Getting Started
 
