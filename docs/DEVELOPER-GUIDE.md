@@ -32,7 +32,6 @@ LimitWatch/
 │  └─ version/                 # Build-time version variables (ldflags)
 ├─ tests/
 │  └─ e2e/
-├─ .github/workflows/ci.yml    # CI: fmt, vet, staticcheck, test -race, build
 ├─ Makefile                    # Common tasks (build/run/docker/etc.)
 ├─ go.mod                      # Module path
 ├─ .gitignore                  # Sensible ignores

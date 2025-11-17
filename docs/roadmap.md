@@ -21,23 +21,23 @@
 
 > **Assumption:** single engineer, ~7–10 days, 6–8 focused hours/day.
 
-### Phase 0 — Project scaffold
+### Phase 0 — Project scaffold (DONE)
 - Repo init, go mod init, CI workflow (fmt, vet, staticcheck, go test -race, build).
 - Folder layout (/cmd/alarmd, /internal/..., /deploy/docker, /deploy/helm, /grafana).
 - **Milestone M0:** CI green; hello‑world server with /healthz.
 
-### Phase 1 — Core domain & storage
+### Phase 1 — Core domain & storage (DONE)
 - Define domain types (Rule, Alarm, AlarmEvent), errors, interfaces.
 - Implement DB schema + migrations (SQLite default), repository layer.
 - **Milestone M1:** Create/read rules and alarms in DB via a temporary CLI.
 
-### Phase 2 — Ingest path & rule engine
+### Phase 2 — Ingest path & rule engine (DONE)
 - Implement /v1/ingest (validation, enqueue) and bounded queue.
 - Implement rule engine (LO/HI, hysteresis/deadband, duration, ROC).
 - Per‑rule state w/ window buffers; property tests; deterministic seed.
 - **Milestone M2:** Deterministic demo: generator → engine → in‑process traces; unit tests passing.
 
-### Phase 3 — Alarm manager & API
+### Phase 3 — Alarm manager & API (DONE)
 - FSM transitions; idempotent updates; alarm deduping.
 - REST endpoints for rules CRUD and alarm listing/ops (ack/silence/clear).
 - JWT middleware; roles (viewer/operator/admin).
@@ -52,11 +52,6 @@
 - Prometheus metrics and useful labels; optional OpenTelemetry traces.
 - Dockerfile (multi‑stage), Helm chart (deployment, svc, config), sample Grafana dashboard JSON.
 - **Milestone M5:** docker run demo + Grafana panels show ingest, rule hits, active alarms, MTTA.
-
-### Phase 6 — Polish & docs
-- README: architecture, runbook, env vars, curl examples, performance notes.
-- 2‑minute screencast script; canned dataset for replay demo.
-- **Milestone M6 (DoD):** One‑command demo script: start → load rules → run generator → alarm triggers → webhook → ack in API → metrics visible.
 
 ### Stretch (time‑permitting)
 - WebSocket /ws live event stream.

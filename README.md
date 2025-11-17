@@ -49,7 +49,10 @@ go run ./cmd/alarmctl rule create \
 ```
 
 ```bash
-curl -s -H "authorization: Bearer $(cat admin.jwt)"          -H 'content-type: application/json'          -d '{"name":"BatteryLow","signal":"Battery.Voltage","type":"threshold","severity":"warn","latch":true,"enabled":true,"config":{"lo":23.5,"hysteresis":0.2,"deadband":0.05,"duration_ms":500}}'          http://localhost:8080/v1/rules | jq .
+curl -s -H "authorization: Bearer $(cat admin.jwt)" \
+    -H 'content-type: application/json' \
+    -d '{"name":"BatteryLow","signal":"Battery.Voltage","type":"threshold","severity":"warn","latch":true,"enabled":true,"config":{"lo":23.5,"hysteresis":0.2,"deadband":0.05,"duration_ms":500}}' \
+    http://localhost:8080/v1/rules | jq .
 ```
 
 > Note: Engine loads rules at startup.
