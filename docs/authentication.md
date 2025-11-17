@@ -15,13 +15,6 @@ Authentication and authorization are centered on **JWT** and is wired through th
 - **operator**: ack/silence/clear
 - **admin**: create rules
 
-## Endpoints & roles (summary)
-- `GET /v1/rules` → viewer+
-- `POST /v1/rules` → admin
-- `GET /v1/alarms` → viewer+
-- `POST /v1/alarms/{id}/(ack|silence|clear)` → operator+
-- `POST /v1/ingest` → open
-
 ## Generate a token
 
 ```bash
@@ -160,12 +153,14 @@ m.Ack(ctx, alarmID, actor) // and similar for Silence, Clear
 
 ---
 
-## What is not authenticated today
-- POST /v1/ingest is not wrapped with the JWT middleware in Phase‑3 (it remains open for now). This was a conscious choice to keep data ingestion simple during early development.
-    - If you want ingest protected:
-        - Wrap /v1/ingest with withAuth and require at least viewer, or
-        - Add an ingest token approach (separate shared key) or mTLS for producers.
-- /debug/pprof/* is behind the PPROF_ENABLED=true flag (disabled by default), but not JWT‑protected. That’s fine for local profiling; in prod you’d typically keep it off or bind it to localhost / admin network.
+## Note on Ingest Authentication
+- POST `/v1/ingest` is not currently wrapped with the JWT middleware to keep data ingestion simple during early development.
+    - Later, to protect ingest:
+        - Wrap `/v1/ingest` with `withAuth` and require at least the `viewer` role.
+        - Or, Add an ingest token (separate shared key) or mTLS for producers.
+- `/debug/pprof/*` is disabled by default and requires the `PPROF_ENABLED=true` flag, but not JWT‑protected.
+    - Ok for local profiling.
+    - In production keep it off or bind it to localhost or admin network.
 
 ---
 
@@ -177,32 +172,15 @@ When set: JWT verification on; when unset: dev mode with admin claims for all AP
 ---
 
 ## Security behaviors & best practices
-- Symmetric key: Both server and token generator share the same JWT_SECRET. Use a high‑entropy secret (32+ random bytes).
-- Token lifetime: The code enforces exp if present; good practice is to keep short lifetimes (e.g., 15–60 minutes).
-- TLS: Always terminate TLS in front of the app so Bearer tokens aren’t exposed in cleartext.
-- Clock skew: The parser uses time.Now().Unix() and doesn’t allow skew, so if systems have time drift, exp could fail early/late. Keep clocks in sync (NTP).
-- Minimal claims: There’s no issuer/audience validation and no nbf/iat checks. That’s fine for internal systems; we can add those if needed.
-- No key rotation: Single secret today. If you need rotation, we can support multiple keys (kid → secret map) and accept either during a transition window.
-- Error handling:
+- **Symmetric key:** Both server and token generator share the same JWT_SECRET. Use a high‑entropy secret (32+ random bytes).
+- **Token lifetime:** The code enforces exp if present; good practice is to keep short lifetimes (e.g., 15–60 minutes).
+- **TLS:** Always terminate TLS in front of the app so Bearer tokens aren’t exposed in cleartext.
+- **Clock skew:** The parser uses time.Now().Unix() and doesn’t allow skew, so if systems have time drift, exp could fail early/late. Keep clocks in sync (NTP).
+- **Minimal claims:** There’s no issuer/audience validation and no nbf/iat checks. That’s fine for internal systems; we can add those if needed.
+- **No key rotation:** Single secret today. If you need rotation, we can support multiple keys (kid → secret map) and accept either during a transition window.
+- **Error handling:**
     - Missing/invalid token → 401
     - Authenticated but insufficient role → 403
-
----
-
-## Endpoint‑by‑endpoint matrix
-
-| Endpoint | Auth? | Role | Notes |
-|----------|-------|------|-------|
-| POST /v1/ingest | No | N/A | Open (for now). Optional to wrap with JWT. |
-| GET /v1/rules | Yes | viewer+ | Lists rules. |
-| POST /v1/rules | Yes | admin | Creates a rule. |
-| GET /v1/alarms | Yes | viewer+ | Lists alarms. |
-| POST /v1/alarms/{id}/ack | Yes | operator+ | Acknowledges an alarm. |
-| POST /v1/alarms/{id}/silence | Yes | operator+ | Silences an alarm until until or for ttl_sec. |
-| POST /v1/alarms/{id}/clear | Yes | operator+ | Clears an alarm (useful for latched rules). |
-| /debug/pprof/* (if enabled) | Flag‑gated | N/A | Controlled by PPROF_ENABLED; keep off in prod. |
-| /healthz, /readyz, /version | No | N/A | Always open; safe to expose. |
-
 
 ---
 
@@ -212,12 +190,3 @@ When set: JWT verification on; when unset: dev mode with admin claims for all AP
 - “token expired” (401) → exp in the past.
 - “forbidden” (403) → valid token but role too low for the endpoint.
 - Everything works without tokens → JWT_SECRET is empty (dev mode); set it to enable auth.
-
----
-
-## Quick suggestions (if you want to tighten things)
-- Protect /v1/ingest with JWT (viewer+ or a separate “producer” role).
-- Add issuer/audience checks to claims for stronger guarantees.
-- Support multiple keys to allow secret rotation (kid header -> secret lookup).
-- Add small grace window for clock skew (± a few seconds) if needed.
-- Wrap pprof behind the same middleware (and/or bind to localhost only) if you need it in prod.
