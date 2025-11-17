@@ -152,5 +152,4 @@ The generator produces simple patterns (`Battery.Voltage`, `Temp.C`) that exerci
 - [Developer Guide](./docs/DEVELOPER-GUIDE.md) - repo layout, tooling, lint/test/e2e.
 - [Architecture](./docs/ARCHITECTURE.md) - how the engine/manager/API fit together.
 - [Auth](./docs/AUTHENTICATION.md) - JWT roles and examples.
-- [Roadmap](./docs/ROADMAP.md) - phases and milestones.
 - [Glossary](./docs/GLOSSARY.md) - key terms.
