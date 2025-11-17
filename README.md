@@ -1,12 +1,12 @@
-# LimitWatch
+# LimitWatch - Real-Time Limits, Alarms & Runbook Actioner
 
-**Real‑Time Limits, Alarms & Runbook Actioner**
-
-LimitWatch ingests telemetry, evaluates rules (threshold, duration, rate‑of‑change with hysteresis/latching), and manages alarms (active → acked → silenced/cleared) with a small, secure HTTP API. It’s a compact, production‑style building block that can run on a laptop, VM, or Kubernetes.
+LimitWatch ingests telemetry, evaluates rules and manages alarms with a small, secure HTTP API. It’s a compact, production-style building block that can run on a laptop, VM, or Kubernetes.
 
 **Provides:**
-- **Near‑real‑time detection** of out‑of‑limits conditions with bounded latency.
+- **Near real-time detection** of out‑of‑limits conditions with bounded latency.
+    - Rules: threshold, duration, rate-of-change with hysteresis and latching
 - **Operational control**: ack/silence/clear with audit trail and roles.
+    - Alarm States: active → acked → silenced/cleared
 - **Simple integration**: HTTP ingest + minimal dependencies (SQLite by default).
 
 ## Getting Started
@@ -29,12 +29,18 @@ go run ./cmd/alarmctl rule create \
 
 ```bash
 go run ./cmd/alarmd
-# Health checks
+```
+
+Open a separate terminal and run health checks:
+
+```bash
 curl -sf localhost:8080/healthz
 curl -sf localhost:8080/readyz
 ```
 
-### 3) Send a Point
+### 3) Ingest telemetry point(s)
+
+Use to send telemetry manually or from external service:
 
 ```bash
 curl -s -X POST localhost:8080/v1/ingest \
@@ -42,9 +48,13 @@ curl -s -X POST localhost:8080/v1/ingest \
   -d '{"name":"Battery.Voltage","value":23.3,"entity":"SC-1"}'
 ```
 
+> Note: a fake signal generator is provided for testing (`internal/generator`).
+
 ### 4) View Alarms (optional JWT)
 
-By default (dev mode), JWT is off. To require tokens:
+By default (dev mode), JWT is off.
+
+To require tokens:
 
 ```bash
 export JWT_SECRET="devsecret"
@@ -55,9 +65,9 @@ curl -s -H "authorization: Bearer $(cat operator.jwt)" http://localhost:8080/v1/
 > Note: Newly created rules via the API will take effect after restart (engine currently compiles rules at startup).
 
 ## Continue Reading
-- User Guide – running, config, and API examples: USER-GUIDE.md
-- Developer Guide – repo layout, tooling, lint/test/e2e: DEVELOPER-GUIDE.md
-- Architecture – how the engine/manager/API fit together: ARCHITECTURE.md
-- Auth – JWT roles and examples: AUTHENTICATION.md
-- Roadmap – phases and milestones: ROADMAP.md
-- Glossary – key terms: GLOSSARY.md
+- [User Guide](./docs/USER-GUIDE.md) - running, config, and API examples
+- [Developer Guide](./docs/DEVELOPER-GUIDE.md) - repo layout, tooling, lint/test/e2e
+- [Architecture](./docs/ARCHITECTURE.md) - how the engine/manager/API fit together
+- [Auth](./docs/AUTHENTICATION.md) - JWT roles and examples
+- [Roadmap](./docs/ROADMAP.md) - phases and milestones
+- [Glossary](./docs/GLOSSARY.md) - key terms
