@@ -6,8 +6,9 @@
 go run ./cmd/alarmd
 ```
 
-- Database will be read from file: `limitwatch.db`
-- Runs migrations implicitly by starting either the server or the CLI (both call `storage.Migrate`)
+- Database will be read from file: `limitwatch.db`.
+- Runs migrations implicitly by starting either the server or the CLI (both call `storage.Migrate`).
+- Enable `TRACE_ENABLED=true` for verbose traces.
 
 ## Check Health
 
@@ -25,18 +26,29 @@ curl -sf localhost:8080/version
 - **Engine:** `INGEST_QUEUE_SIZE` (4096), `WORKERS` (NumCPU), `TRACE_ENABLED` (false)
 - **Auth:** `JWT_SECRET` (empty → dev mode, tokens not required)
 
+### NEE TO UPDATE THIS (OLD)
+- `INGEST_QUEUE_SIZE` (default **4096**): bounded queue capacity.
+- `WORKERS` (default **NumCPU**): number of evaluation workers.
+- `TRACE_ENABLED` (default **false**): log engine traces (trip/clear/hold).
+- `GEN_ENABLED` (default **false**): start built-in generator for demo.
+- `GEN_PATTERN` (default **step**): one of `step|sine|ramp|noise`.
+- `GEN_RATE_HZ` (default **10**): generator points per second.
+- `GEN_SEED` (default **42**): deterministic seed for reproducibility.
+
 ## Authentication (JWT)
 - If `JWT_SECRET` set → JWT required; if unset → dev mode (all calls act as admin).
 - Roles:
     - viewer (GET)
     - operator (ack/silence/clear)
     - admin (create rules)
-- Generate a token:
+- Use `cmd/jwtgen` to create tokens:
 
     ```bash
     export JWT_SECRET="devsecret"
     go run ./cmd/jwtgen -sub ops@example -role operator -secret "$JWT_SECRET" -exp 1h > operator.jwt
     ```
+
+- Then call APIs with `Authorization: Bearer <token>`.
 
 > For more details see [Authentication](./AUTHENTICATION.md).
 
@@ -46,15 +58,19 @@ The engine loads rules at startup. Rules created after startup (via API) take ef
 
 ## API quick reference
 
-| **Endpoint**                   | **Role**  | **Description**                                                 |
-| ------------------------------ | --------- | --------------------------------------------------------------- |
-| POST `/v1/ingest`              | open      | Send 1 or many points (JSON). Returns 202 and `{"ingested":N}`. |
-| GET `/v1/rules`                | viewer+   | List rules.                                                     |
-| POST `/v1/rules`               | admin     | Create a rule. Takes JSON payload with rule config.             |
-| GET `/v1/alarms`               | viewer+   | List alarms (active/acked/silenced/inactive).                   |
-| POST `/v1/alarms/{id}/ack`     | operator+ | Acknowledge an alarm.                                           |
-| POST `/v1/alarms/{id}/silence` | operator+ | Silence until time or TTL.                                      |
-| POST `/v1/alarms/{id}/clear`   | operator+ | Clear (needed for latched alarms).                              |
+| **Endpoint**                   | **Role**  | **Description**                                                     |
+| ------------------------------ | --------- | ------------------------------------------------------------------- |
+| POST `/v1/ingest`              | open      | Ingest telemetry point(s) (JSON). Returns 202 and `{"ingested":N}`. |
+| GET `/v1/rules`                | viewer+   | List rules.                                                         |
+| POST `/v1/rules`               | admin     | Create a rule. Takes JSON payload with rule config.                 |
+| GET `/v1/alarms`               | viewer+   | List alarms (active/acked/silenced/inactive).                       |
+| POST `/v1/alarms/{id}/ack`     | operator+ | Acknowledge an alarm.                                               |
+| POST `/v1/alarms/{id}/silence` | operator+ | Silence an alarm until time or TTL.                                          |
+| POST `/v1/alarms/{id}/clear`   | operator+ | Clear an alarm (needed for latched alarms).                                  |
+| GET `/healthz`                 | open      | Liveness                                                            |
+| GET `/readyz`                  | open      | Readiness                                                           |
+| GET `/version`                 | open      | Build metadata (version/commit/date)                                |
+| GET `/debug/pprof/*`           | open      | Debug profiling endpoints (Enable with `PPROF_ENABLED=true`)        |
 
 ## Examples
 
@@ -83,7 +99,3 @@ curl -s -X POST -H "authorization: Bearer $(cat operator.jwt)" http://localhost:
 curl -s -X POST -H "authorization: Bearer $(cat operator.jwt)" -H 'content-type: application/json' -d '{"ttl_sec":120}' http://localhost:8080/v1/alarms/$ALARM_ID/silence
 curl -s -X POST -H "authorization: Bearer $(cat operator.jwt)" http://localhost:8080/v1/alarms/$ALARM_ID/clear
 ```
-
-## Debug diagnostics
-
-- GET `/debug/pprof/*` (enable with `PPROF_ENABLED=true`)

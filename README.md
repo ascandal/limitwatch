@@ -14,7 +14,7 @@ LimitWatch ingests telemetry, evaluates rules and manages alarms with a small, s
 ### Prereqs
 - Go `1.22+` installed.
 
-### 1) Create Rules (engine loads rules at startup)
+### 1) Create Rules (admin)
 
 CLI (`alarmctl`) is provided to exercise the storage layer.
 
@@ -27,6 +27,12 @@ go run ./cmd/alarmctl rule create \
   --latch \
   --config-json '{"lo":23.5,"hysteresis":0.2,"deadband":0.05,"duration_ms":500}'
 ```
+
+```bash
+curl -s -H "authorization: Bearer $(cat admin.jwt)"          -H 'content-type: application/json'          -d '{"name":"BatteryLow","signal":"Battery.Voltage","type":"threshold","severity":"warn","latch":true,"enabled":true,"config":{"lo":23.5,"hysteresis":0.2,"deadband":0.05,"duration_ms":500}}'          http://localhost:8080/v1/rules | jq .
+```
+
+> Note: Engine loads rules at startup.
 
 **List rules:**
 ```bash
@@ -50,6 +56,13 @@ go run ./cmd/alarmctl alarm list
 go run ./cmd/alarmd
 ```
 
+```bash
+export JWT_SECRET="devsecret"   # enable JWT
+go run ./cmd/jwtgen -sub ops@org_name -role admin -secret "$JWT_SECRET" -exp 1h > admin.jwt
+go run ./cmd/jwtgen -sub ops@org_name -role operator -secret "$JWT_SECRET" -exp 1h > operator.jwt
+TRACE_ENABLED=true GEN_ENABLED=true GEN_PATTERN=step GEN_RATE_HZ=10 GEN_SEED=42          go run ./cmd/alarmd
+```
+
 Open a separate terminal and run health checks:
 
 ```bash
@@ -67,9 +80,17 @@ curl -s -X POST localhost:8080/v1/ingest \
   -d '{"name":"Battery.Voltage","value":23.3,"entity":"SC-1"}'
 ```
 
+- Returns `202 Accepted` and `{"ingested": N}` on success.
+- Adds `X-Queue-Len` header with current queue length.
+- Returns `503 Service Unavailable` if the bounded queue is full.
+
 > Note: a fake signal generator is provided for testing (`internal/generator`).
 
-### 5) View Alarms (optional JWT)
+### 5) Watch Alarms (optional JWT)
+
+```bash
+curl -s -H "authorization: Bearer $(cat operator.jwt)" http://localhost:8080/v1/alarms | jq .
+```
 
 By default (dev mode), JWT is off.
 
@@ -80,6 +101,16 @@ export JWT_SECRET="devsecret"
 go run ./cmd/jwtgen -sub ops@example -role operator -secret "$JWT_SECRET" -exp 1h > operator.jwt
 curl -s -H "authorization: Bearer $(cat operator.jwt)" http://localhost:8080/v1/alarms | jq .
 ```
+
+### 6) Actions on Alarm State (Ack, silence, clear):
+
+```bash
+ALARM_ID=$(curl -s -H "authorization: Bearer $(cat operator.jwt)" http://localhost:8080/v1/alarms | jq -r '.[0].id')
+curl -s -X POST -H "authorization: Bearer $(cat operator.jwt)" http://localhost:8080/v1/alarms/$ALARM_ID/ack | jq .
+curl -s -X POST -H "content-type: application/json" -H "authorization: Bearer $(cat operator.jwt)"          -d '{"ttl_sec":120}' http://localhost:8080/v1/alarms/$ALARM_ID/silence | jq .
+curl -s -X POST -H "authorization: Bearer $(cat operator.jwt)" http://localhost:8080/v1/alarms/$ALARM_ID/clear | jq .
+```
+
 
 > Note: Newly created rules via the API will take effect after restart (engine currently compiles rules at startup).
 

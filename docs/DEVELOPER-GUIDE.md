@@ -40,6 +40,11 @@ LimitWatch/
 └─ README.md                   # Quick start
 ```
 
+- `internal/engine`: Now emits `EvalReport` on a channel; manager consumes it.
+- `internal/manager`: Updates `alarms` and `alarm_events` on trip/clear; provides Ack/Silence/Clear ops.
+- `internal/api`: REST endpoints.
+- `internal/auth`: Minimal HS256 JWT validator; roles `viewer|operator|admin`.
+- `cmd/jwtgen`: helper to mint demo tokens.
 - `tools.go` pins CLI tool dependency versions.
     - Blank imports (`_ "module/path"`) to declare dependencies on CLI tools.
     - The tools build tag `//go:build tools tag` prevents the file from getting built into the app. It generates a durable list so `go.mod` can track the tool versions.
@@ -144,7 +149,7 @@ go test -race ./...
 task vuln
 ```
 
-- govulncheck consults Go’s vuln DB and reports reachable vulnerabilities, reducing false positives.
+- `govulncheck` consults Go’s vuln DB and reports reachable vulnerabilities, reducing false positives.
 
 #### Run the app:
 
@@ -163,6 +168,40 @@ task build
 - `-trimpath` strips local paths from the binary for reproducibility.
 - `-ldflags="-s -w"` drops symbol & DWARF tables for smaller size.
 - Output goes to bin/app.
+
+
+## Helper CLI `./cmd/alarmctl` to exercise the storage layer.
+
+- **Threshold** (lo 23.5V, hysteresis 0.2V, latched):
+  ```bash
+  go run ./cmd/alarmctl rule create \
+    --name BatteryLow \
+    --signal Battery.Voltage \
+    --type threshold \
+    --severity warn \
+    --latch \
+    --config-json '{"lo":23.5,"hysteresis":0.2,"deadband":0.05,"duration_ms":500}'
+  ```
+
+- **ROC** (Temp rising faster than 0.15 °C/s over a 1s window):
+  ```bash
+  go run ./cmd/alarmctl rule create \
+    --name TempRiseFast \
+    --signal Temp.C \
+    --type roc \
+    --severity warn \
+    --config-json '{"window_ms":1000,"gt":0.15,"abs":true}'
+  ```
+
+- **Duration** (Pressure > 1.2 for at least 3s):
+  ```bash
+  go run ./cmd/alarmctl rule create \
+    --name PressureHighSustain \
+    --signal Pressure.Bar \
+    --type duration \
+    --severity crit \
+    --config-json '{"op":">","threshold":1.2,"duration_ms":3000,"hysteresis":0.05}'
+  ```
 
 
 ## Notes for contributors
