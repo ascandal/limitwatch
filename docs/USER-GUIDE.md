@@ -1,22 +1,29 @@
 # User Guide
 
-## Run
+## Start the server with defaults (SQLite file:limitwatch.db)
 
 ```bash
-# Start with defaults (SQLite file:limitwatch.db)
 go run ./cmd/alarmd
+```
 
-# Health
+- Database will be read from file: `limitwatch.db`
+- Runs migrations implicitly by starting either the server or the CLI (both call `storage.Migrate`)
+
+## Check Health
+
+```bash
 curl -sf localhost:8080/healthz
 curl -sf localhost:8080/readyz
 curl -sf localhost:8080/version
 ```
 
-## Configuration (env)
-- **Server:** PORT (8080), PPROF_ENABLED (false)
-- **DB:** DB_DSN (SQLite DSN with WAL & busy timeout by default)
-- **Engine:** INGEST_QUEUE_SIZE (4096), WORKERS (NumCPU), TRACE_ENABLED (false)
-- **Auth:** JWT_SECRET (empty → dev mode, tokens not required)
+### Configuration (env)
+- **Server:** `PORT` (8080), `PPROF_ENABLED` (false)
+- **DB:** `DB_DSN` (SQLite DSN with WAL & busy timeout by default)
+    - `DB_DSN` — database DSN (defaults to `file:limitwatch.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)`).
+    - For SQLite, the DSN above enables WAL mode and a 5s busy timeout for better concurrency and fewer "database is locked" errors.
+- **Engine:** `INGEST_QUEUE_SIZE` (4096), `WORKERS` (NumCPU), `TRACE_ENABLED` (false)
+- **Auth:** `JWT_SECRET` (empty → dev mode, tokens not required)
 
 ## Authentication (JWT)
 - If `JWT_SECRET` set → JWT required; if unset → dev mode (all calls act as admin).
@@ -31,7 +38,7 @@ curl -sf localhost:8080/version
     go run ./cmd/jwtgen -sub ops@example -role operator -secret "$JWT_SECRET" -exp 1h > operator.jwt
     ```
 
-> See more details in AUTHENTICATION.md.
+> For more details see [Authentication](./AUTHENTICATION.md).
 
 ## Current limitation
 
@@ -77,7 +84,6 @@ curl -s -X POST -H "authorization: Bearer $(cat operator.jwt)" -H 'content-type:
 curl -s -X POST -H "authorization: Bearer $(cat operator.jwt)" http://localhost:8080/v1/alarms/$ALARM_ID/clear
 ```
 
-## Health & diagnostics
+## Debug diagnostics
 
-- GET `/healthz`, GET `/readyz`, GET `/version`
 - GET `/debug/pprof/*` (enable with `PPROF_ENABLED=true`)

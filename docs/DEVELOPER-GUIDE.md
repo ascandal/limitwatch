@@ -40,84 +40,40 @@ LimitWatch/
 └─ README.md                   # Quick start
 ```
 
-## Tooling
-- **Go** 1.22+
-- **golangci‑lint** v2.x (config in `.golangci.yml`)
-- **gofumpt** + **goimports**
-
-## Install toolchain and run:
-
-```bash
-go mod tidy
-golangci-lint run
-go test ./...
-```
-
-## Lint & format
-
-```bash
-gofumpt -w .
-goimports -w .
-golangci-lint run
-```
-
-## Testing
-- Unit tests: engine rule logic (threshold, duration, ROC).
-- E2E (httptest): seeds DB, starts in‑proc server, ingests points, verifies alarm FSM.
-
-```bash
-go test -v ./tests/e2e -run TestE2E_Httptest_M3
-# Optional
-go test -race ./...
-```
-
-## Local run
-
-```bash
-go run ./cmd/alarmd
-curl -sf localhost:8080/healthz
-```
-
-## Notes for contributors
-- Structured logs via slog (JSON).
-- Strict error handling (check/propagate; avoid swallowing).
-- Graceful shutdown and HTTP timeouts are in place.
-
-
-
-
-
-
-
-## Tooling
-
 - `tools.go` pins CLI tool dependency versions.
     - Blank imports (`_ "module/path"`) to declare dependencies on CLI tools.
     - The tools build tag `//go:build tools tag` prevents the file from getting built into the app. It generates a durable list so `go.mod` can track the tool versions.
 - `Taskfile.yml` defines fast, cross‑platform commands to run locally and in CI.
 
-To add the Go bin directory to the shell PATH run:
+
+## Tooling
+- **Go** 1.22+
+- **golangci‑lint** v2.x (config in `.golangci.yml`)
+- **gofumpt** + **goimports**
+- **go-task**
+
+    **Install the command runner (**Task**):**
+    [Github go-task](https://github.com/go-task/task)
+    [Taskfile.dev](https://taskfile.dev/)
+
+    ```zsh
+    npm install -g @go-task/cli
+    ```
+
+    or
+
+    ```zsh
+    go install github.com/go-task/task/v3/cmd/task@latest
+    ```
+
+### To add the Go bin directory to the shell PATH run:
 
 ```zsh
 echo 'export PATH="$(go env GOPATH)/bin:$PATH"' >> ~/.zshrc
 source ~/.zshrc
 ```
 
-Install the command runner (**Task**):
-[Github go-task](https://github.com/go-task/task)
-[Taskfile.dev](https://taskfile.dev/)
-
-```zsh
-npm install -g @go-task/cli
-```
-
-or
-
-```zsh
-go install github.com/go-task/task/v3/cmd/task@latest
-```
-
-Install the tool binaries at the pinned versions
+### Install the tool binaries at the pinned versions
 
 ```zsh
 go install golang.org/x/tools/cmd/goimports@$(go list -f '{{.Version}}' -m golang.org/x/tools)
@@ -126,11 +82,12 @@ go install gotest.tools/gotestsum@$(go list -f '{{.Version}}' -m gotest.tools/go
 go install golang.org/x/vuln/cmd/govulncheck@$(go list -f '{{.Version}}' -m golang.org/x/vuln)
 ```
 
-Notes from install:
+## Install toolchain and run:
 
-```zsh
-# github.com/golangci/golangci-lint/cmd/golangci-lint
-ld: warning: -bind_at_load is deprecated on macOS
+```bash
+go mod tidy
+golangci-lint run
+go test ./...
 ```
 
 ### Run the Dev Tools
@@ -158,6 +115,10 @@ task fmt
 task lint
 ```
 
+```bash
+golangci-lint run
+```
+
 - Runs golangci-lint (a fast meta‑linter that aggregates many linters).
 
 #### Test (concise, readable output):
@@ -166,7 +127,16 @@ task lint
 task test
 ```
 
+```bash
+go test -v ./tests/e2e -run TestE2E_Httptest_M3
+# Optional
+go test -race ./...
+```
+
+- Unit tests: engine rule logic (threshold, duration, ROC).
+- E2E (httptest): seeds DB, starts in‑proc server, ingests points, verifies alarm FSM.
 - `gotestsum --format=short-verbose -- ./...` runs all package tests and prints a compact per‑test summary.
+
 
 #### Vulnerability scan (supply‑chain + code paths):
 
@@ -195,66 +165,7 @@ task build
 - Output goes to bin/app.
 
 
-## Phase 1 — Core domain & storage
-
-- **Domain types**:
-    - Centralized, stable, and storage-agnostic data types.
-    - Rule
-    - Alarm
-    - AlarmEvent
-    - typed enums
-- **Migrations**: Safe and repeatable SQL schema migrations and auto-bootstrap on startup.
-- **SQLite default**: Minimal external dependency for SQLite-backed fast demos.
-    - Later, point to Postgres by switching DSN/driver.
-- **CLI**: Temporary CLI (`alarmctl`) to exercise the storage layer.
-    - Create/read rules and alarms. (Milestone M1)
-
-### Getting started
-
-1) Ensure your module path matches your repo (e.g., `github.com/ascandal/limitwatch`) and run:
-
-```bash
-go mod tidy
-```
-
-2) Run migrations implicitly by starting either the server or the CLI (both call `storage.Migrate`):
-
-```bash
-# Start server (db: file:limitwatch.db)
-go run ./cmd/alarmd
-```
-
-3) Create a rule via CLI:
-Threshold rule with config JSON (example: low threshold with hysteresis)
-
-```bash
-go run ./cmd/alarmctl rule create \
-    --name BatteryLow \
-    --signal Battery.Voltage \
-    --type threshold \
-    --severity warn \
-    --latch \
-    --config-json '{"lo": 23.5, "hysteresis": 0.2, "deadband": 0.1, "duration_ms": 0}'
-```
-
-4) List rules:
-
-```bash
-go run ./cmd/alarmctl rule list
-```
-
-5) Create a test alarm and list it:
-```bash
-go run ./cmd/alarmctl alarm create --rule-id 1 --entity SC-1 --state active --note "Triggered by test"
-go run ./cmd/alarmctl alarm list
-```
-
-### Configuration
-
-- `DB_DSN` — database DSN (defaults to `file:limitwatch.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)`).
-- For SQLite, the DSN above enables WAL mode and a 5s busy timeout for better concurrency and fewer "database is locked" errors.
-
-### What’s next (Phase 2 preview)
-- Add ingest endpoint and a rule engine to evaluate thresholds/ROC/duration in-process with bounded latency.
-- Extend repositories with update methods and implement the Alarm FSM transitions and audit entries.
-- Wire API endpoints for rules CRUD and alarm listing/ops.
+## Notes for contributors
+- Structured logs via slog (JSON).
+- Strict error handling (check/propagate; avoid swallowing).
+- Graceful shutdown and HTTP timeouts are in place.

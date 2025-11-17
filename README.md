@@ -14,7 +14,10 @@ LimitWatch ingests telemetry, evaluates rules and manages alarms with a small, s
 ### Prereqs
 - Go `1.22+` installed.
 
-### 1) Seed a Rule (engine loads rules at startup)
+### 1) Create Rules (engine loads rules at startup)
+
+CLI (`alarmctl`) is provided to exercise the storage layer.
+
 ```bash
 go run ./cmd/alarmctl rule create \
   --name BatteryLow \
@@ -25,7 +28,23 @@ go run ./cmd/alarmctl rule create \
   --config-json '{"lo":23.5,"hysteresis":0.2,"deadband":0.05,"duration_ms":500}'
 ```
 
-### 2) Start the Server
+**List rules:**
+```bash
+go run ./cmd/alarmctl rule list
+```
+
+### 2) Create Alarms
+
+```bash
+go run ./cmd/alarmctl alarm create --rule-id 1 --entity SC-1 --state active --note "Triggered by test"
+```
+
+**List alarms:**
+```bash
+go run ./cmd/alarmctl alarm list
+```
+
+### 3) Start the Server
 
 ```bash
 go run ./cmd/alarmd
@@ -38,7 +57,7 @@ curl -sf localhost:8080/healthz
 curl -sf localhost:8080/readyz
 ```
 
-### 3) Ingest telemetry point(s)
+### 4) Ingest telemetry point(s)
 
 Use to send telemetry manually or from external service:
 
@@ -50,7 +69,7 @@ curl -s -X POST localhost:8080/v1/ingest \
 
 > Note: a fake signal generator is provided for testing (`internal/generator`).
 
-### 4) View Alarms (optional JWT)
+### 5) View Alarms (optional JWT)
 
 By default (dev mode), JWT is off.
 
