@@ -131,7 +131,7 @@ Use them with:
 -H "authorization: Bearer $(cat operator.jwt)"
 ```
 
-## Optional: demo generator
+## Demo Generator (Optional)
 
 For quick demos you can enable a built‑in generator that feeds synthetic signals into the engine:
 

@@ -119,6 +119,8 @@ curl -s -H "authorization: Bearer $(cat admin.jwt)" \
   http://localhost:8080/v1/rules
 ```
 
+> There is no `POST /v1/alarms` endpoint to create an alarm directly. Alarms are created automatically when incoming telemetry violates a configured rule.
+
 ### Ack / Silence / Clear
 
 ```bash
