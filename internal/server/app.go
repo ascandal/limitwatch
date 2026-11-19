@@ -22,6 +22,7 @@ import (
 	"github.com/ascandal/limitwatch/internal/repository"
 	"github.com/ascandal/limitwatch/internal/repository/sqlite"
 	"github.com/ascandal/limitwatch/internal/storage"
+	"github.com/ascandal/limitwatch/internal/telemetry"
 	"github.com/ascandal/limitwatch/internal/version"
 )
 
@@ -109,14 +110,17 @@ func NewApp(parent context.Context, cfg Config, logger *slog.Logger) (*App, erro
 	// --- HTTP routing mux ---
 	mux := http.NewServeMux()
 	registerCommonRoutes(mux, logger)
-	registerIngest(mux, eng, logger)
+	history := telemetry.New(db)
+	registerIngest(mux, eng, history, logger)
 
 	// Secure APIs (JWT)
 	if len(cfg.JWTSecret) == 0 {
 		logger.Warn("JWT disabled (JWT_SECRET empty); all API calls allowed as admin (dev mode).")
 	}
 
-	api.New(repos, mgr, cfg.JWTSecret, logger).Routes(mux)
+	apiHandler := api.New(repos, mgr, cfg.JWTSecret, logger)
+	apiHandler.Routes(mux)
+	apiHandler.TelemetryRoutes(mux, history)
 
 	if cfg.EnablePprof {
 		registerPprof(mux)
@@ -208,7 +212,7 @@ func registerCommonRoutes(mux *http.ServeMux, logger *slog.Logger) {
 	})
 }
 
-func registerIngest(mux *http.ServeMux, eng *engine.Engine, logger *slog.Logger) {
+func registerIngest(mux *http.ServeMux, eng *engine.Engine, history *telemetry.Store, logger *slog.Logger) {
 	// Telemetry point injection (single or multiple points)
 	mux.HandleFunc("/v1/ingest", func(w http.ResponseWriter, r *http.Request) {
 		if !allowMethods(w, r, http.MethodPost) {
@@ -253,6 +257,17 @@ func registerIngest(mux *http.ServeMux, eng *engine.Engine, logger *slog.Logger)
 		}
 
 		n := 0
+
+		// Monitoring persistence follows queue acceptance, including an accepted
+		// prefix of a failed batch. Archive failures do not change alarm ingest.
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.WithoutCancel(r.Context()), 2*time.Second)
+			defer cancel()
+			if err := history.Record(ctx, pts[:n]); err != nil {
+				logger.Error("telemetry history write failed", "err", err, "accepted", n)
+			}
+		}()
+
 		for i := range pts {
 			if err := pts[i].Normalize(); err != nil {
 				http.Error(

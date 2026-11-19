@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { Telemetry } from '@/components/telemetry';
 import {
   Activity,
   AlertTriangle,
@@ -139,7 +140,7 @@ export function Console() {
   const [token, setToken] = useState('');
   const [draftToken, setDraftToken] = useState('');
   const [tokenOpen, setTokenOpen] = useState(false);
-  const [tab, setTab] = useState<'alarms' | 'rules'>('alarms');
+  const [tab, setTab] = useState<'telemetry' | 'alarms' | 'rules'>('telemetry');
   return (
     <>
       <a className="skip-link" href="#main">
@@ -156,6 +157,15 @@ export function Console() {
           <span className="product-label">OPERATOR CONSOLE</span>
         </div>
         <nav aria-label="Console navigation">
+          <button
+            className={
+              tab === 'telemetry' ? 'nav-button selected' : 'nav-button'
+            }
+            onClick={() => setTab('telemetry')}
+          >
+            <Activity size={17} />
+            Telemetry
+          </button>
           <button
             className={tab === 'alarms' ? 'nav-button selected' : 'nav-button'}
             onClick={() => setTab('alarms')}
@@ -228,7 +238,11 @@ export function Console() {
           </form>
         </section>
       )}
-      <Dashboard key={token} token={token} tab={tab} />
+      {tab === 'telemetry' ? (
+        <Telemetry key={token} token={token} />
+      ) : (
+        <Dashboard key={token} token={token} tab={tab} />
+      )}
       <footer className="footer">
         <span>
           <Activity size={14} />

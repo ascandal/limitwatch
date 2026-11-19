@@ -117,7 +117,9 @@ make web-install
 make web-dev
 ```
 
-Open **http://localhost:3000**. The console lists the latest 100 alarms, filters by state or text, and shows rule conditions and event history. Select an alarm to acknowledge or clear it. Polling runs every five seconds; refresh failures keep the previous snapshot visible and disable actions. Rule definitions are read-only and require a service restart to activate changes.
+Open **http://localhost:3000**. The Telemetry tab shows live values and retained history with time filters and min/max trend charts, refreshing every two seconds. Restart the updated Go service to enable capture of newly ingested samples. History retains up to 100,000 samples across all streams in SQLite.
+
+The Alarms tab lists the latest 100 alarms, filters by state or text, and shows rule conditions and event history. Select an alarm to acknowledge or clear it. Alarm polling runs every five seconds; refresh failures keep the previous snapshot visible and disable actions. Rule definitions are read-only and require a service restart to activate changes.
 
 Next.js connects to Go through `LIMITWATCH_API_URL` (default `http://127.0.0.1:8080`), read at runtime by its server. Go serves only its HTTP API and does not build or serve the frontend. Each service has its own Docker image. See [the web README](web/README.md) for configuration, production startup, and deployment.
 

@@ -6,7 +6,7 @@ A Next.js/React application that talks to the Go LimitWatch service through HTTP
 Browser → Next.js :3000 → Go HTTP API :8080 → SQLite
 ```
 
-The Next.js server forwards the browser's bearer token. Go owns authentication, rule evaluation, alarm state, and event history. The proxy exposes only the reads, acknowledgment, and clearing used by the console. It does not expose telemetry ingestion or rule creation.
+The Next.js server forwards the browser's bearer token. Go owns authentication, rule evaluation, alarm state, event history, and telemetry history. The proxy exposes only the reads, acknowledgment, and clearing used by the console. It does not expose telemetry ingestion or rule creation.
 
 ## Development
 
@@ -27,6 +27,21 @@ WORKERS=1 go run ./cmd/alarmd
 ```
 
 Alternatively, `make demo` starts an isolated Go API with synthetic data for the console. Use the API URL it prints if you selected a different demo port.
+
+## Telemetry monitoring
+
+The console opens on **Telemetry**. Select a signal/entity to see its latest received value, source timestamp, reception time, and trend. It refreshes every two seconds. Pause the view to inspect it, choose a recent time window, or apply a custom source-time range up to 31 days. The chart shows bucket means and a minimum/maximum band so spikes remain visible. Expand the time-bucket table for exact counts and values. Refresh failures preserve the last successful data and display an error.
+
+Restart the updated Go service once to create the telemetry table, then ingest new samples. Existing alarm records cannot reconstruct telemetry from before this update. Up to 100,000 recent samples are retained across all streams in the existing SQLite database, surviving normal restarts. The signal list shows the 200 most recently received streams. History responses contain at most 300 time buckets over the full selected range.
+
+Monitoring capture is best effort after queue acceptance; storage failures are logged without changing alarm ingestion responses. It is not a durable ingestion queue. The read endpoints require the existing `viewer` role or higher:
+
+```text
+GET /v1/telemetry/streams
+GET /v1/telemetry/history?name=TestStand.TempC&entity=STAND-1&from=2026-11-19T00:00:00Z&to=2026-11-19T01:00:00Z
+```
+
+`from` and `to` are RFC3339 source timestamps. Without them, history defaults to the last hour. Each bucket includes start/end source times, count, minimum, maximum, and mean. The latest received value is separate from the chart: delayed telemetry can arrive now with an older source time.
 
 ## Production
 

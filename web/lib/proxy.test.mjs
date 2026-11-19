@@ -133,3 +133,33 @@ test('does not follow redirects with bearer credentials', async () => {
   assert.equal((await proxyRequest(request('/v1/alarms'))).status, 502);
   assert.equal(calls, 1);
 });
+
+test('forwards telemetry monitoring reads but keeps ingestion closed', async () => {
+  globalThis.fetch = async (url, options) => {
+    assert.equal(options.method, 'GET');
+    assert.equal(options.headers.get('authorization'), 'Bearer test-token');
+    assert.ok(url.pathname.startsWith('/v1/telemetry/'));
+    if (url.pathname.endsWith('history')) {
+      assert.equal(url.searchParams.get('name'), 'Sensor&A');
+      assert.equal(url.searchParams.get('entity'), 'STAND-1');
+    }
+    return Response.json({});
+  };
+  assert.equal(
+    (await proxyRequest(request('/v1/telemetry/streams'))).status,
+    200,
+  );
+  assert.equal(
+    (
+      await proxyRequest(
+        request('/v1/telemetry/history?name=Sensor%26A&entity=STAND-1'),
+      )
+    ).status,
+    200,
+  );
+  assert.equal(
+    (await proxyRequest(request('/v1/telemetry/streams', 'POST'))).status,
+    405,
+  );
+  assert.equal((await proxyRequest(request('/v1/ingest', 'POST'))).status, 404);
+});

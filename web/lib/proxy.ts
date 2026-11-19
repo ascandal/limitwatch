@@ -4,7 +4,7 @@ export async function proxyRequest(request: Request): Promise<Response> {
   const incoming = new URL(request.url);
   const path = incoming.pathname;
   const read =
-    /^\/v1\/(rules|alarms)$/.test(path) ||
+    /^\/v1\/(rules|alarms|telemetry\/(streams|history))$/.test(path) ||
     /^\/v1\/alarms\/[1-9]\d*\/events$/.test(path);
   const write = /^\/v1\/alarms\/[1-9]\d*\/(ack|clear)$/.test(path);
   if (!read && !write) return new Response('Not found', { status: 404 });

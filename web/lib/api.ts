@@ -104,3 +104,48 @@ export function actOnAlarm(
     'POST',
   );
 }
+
+export interface TelemetrySample {
+  id: number;
+  name: string;
+  entity: string;
+  value: number;
+  ts: string;
+  received_at: string;
+}
+export interface TelemetryBucket {
+  start: string;
+  end: string;
+  min: number;
+  max: number;
+  mean: number;
+  count: number;
+}
+export interface TelemetryHistory {
+  buckets: TelemetryBucket[];
+  from: string;
+  to: string;
+  retention_samples: number;
+}
+export function getTelemetryStreams(token: string, signal?: AbortSignal) {
+  return request<{
+    streams: TelemetrySample[];
+    has_more: boolean;
+    retention_samples: number;
+  }>('/v1/telemetry/streams', token, signal);
+}
+export function getTelemetryHistory(
+  name: string,
+  entity: string,
+  from: string,
+  to: string,
+  token: string,
+  signal?: AbortSignal,
+) {
+  const query = new URLSearchParams({ name, entity, from, to });
+  return request<TelemetryHistory>(
+    `/v1/telemetry/history?${query}`,
+    token,
+    signal,
+  );
+}

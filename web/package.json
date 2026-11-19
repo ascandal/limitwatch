@@ -13,7 +13,7 @@
     "format": "prettier --write app components lib scripts next.config.mjs eslint.config.mjs",
     "format:check": "prettier --check app components lib scripts next.config.mjs eslint.config.mjs",
     "start": "node .next/standalone/server.js",
-    "test": "node --test lib/proxy.test.mjs"
+    "test": "node --test lib/*.test.mjs"
   },
   "dependencies": {
     "lucide-react": "1.75.0",
