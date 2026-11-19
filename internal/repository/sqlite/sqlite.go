@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
@@ -20,7 +21,7 @@ type Repo struct {
 func New(db *sql.DB) *Repo {
 	r := &Repo{db: db}
 	r.Rules = &ruleRepo{db: db}
-	r.Alarms = &alarmRepo{db: db}
+	r.Alarms = &alarmRepo{db: db, pool: db}
 	return r
 }
 
@@ -114,7 +115,7 @@ func (r *ruleRepo) List(ctx context.Context) ([]domain.Rule, error) {
 		out = append(out, rule)
 	}
 
-	return out, nil
+	return out, rows.Err()
 }
 
 func scanRule(row *sql.Row) (*domain.Rule, error) {
@@ -141,7 +142,39 @@ func scanRule(row *sql.Row) (*domain.Rule, error) {
 }
 
 // ----- Alarms -----
-type alarmRepo struct{ db *sql.DB }
+type sqlExecutor interface {
+	ExecContext(context.Context, string, ...any) (sql.Result, error)
+	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
+	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+type alarmRepo struct {
+	db   sqlExecutor
+	pool *sql.DB
+}
+
+// BEGIN IMMEDIATE reserves the SQLite writer before the first read. Evaluator
+// reports and operator actions therefore cannot overwrite a stale alarm state,
+// including when they arrive through different database connections.
+func (a *alarmRepo) Transact(ctx context.Context, fn func(repository.AlarmRepository) error) error {
+	if a.pool == nil {
+		return fmt.Errorf("nested alarm transactions are not supported")
+	}
+	conn, err := a.pool.Conn(ctx)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = conn.Close() }()
+	if _, err := conn.ExecContext(ctx, "BEGIN IMMEDIATE"); err != nil {
+		return err
+	}
+	defer func() { _, _ = conn.ExecContext(context.Background(), "ROLLBACK") }()
+	if err := fn(&alarmRepo{db: conn}); err != nil {
+		return err
+	}
+	_, err = conn.ExecContext(ctx, "COMMIT")
+	return err
+}
 
 func (a *alarmRepo) Create(ctx context.Context, al *domain.Alarm) error {
 	now := time.Now().UTC()
@@ -285,7 +318,7 @@ func (a *alarmRepo) List(ctx context.Context, limit int) ([]domain.Alarm, error)
 		out = append(out, al)
 	}
 
-	return out, nil
+	return out, rows.Err()
 }
 
 func (a *alarmRepo) Update(ctx context.Context, al *domain.Alarm) error {
@@ -319,11 +352,15 @@ func (a *alarmRepo) CreateEvent(ctx context.Context, ev *domain.AlarmEvent) erro
 	return nil
 }
 
-func (a *alarmRepo) ListEvents(ctx context.Context, alarmID int64) ([]domain.AlarmEvent, error) {
+func (a *alarmRepo) ListEvents(ctx context.Context, alarmID, afterID int64, limit int) ([]domain.AlarmEvent, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 100
+	}
 	rows, err := a.db.QueryContext(
 		ctx,
-		`SELECT id, alarm_id, type, actor, at, note, payload FROM alarm_events WHERE alarm_id = ? ORDER BY at ASC`,
-		alarmID,
+		`SELECT id, alarm_id, type, actor, at, note, payload FROM alarm_events
+         WHERE alarm_id = ? AND id > ? ORDER BY id ASC LIMIT ?`,
+		alarmID, afterID, limit,
 	)
 
 	if err != nil {
@@ -332,7 +369,7 @@ func (a *alarmRepo) ListEvents(ctx context.Context, alarmID int64) ([]domain.Ala
 
 	defer closeRows(rows)
 
-	var out []domain.AlarmEvent
+	out := make([]domain.AlarmEvent, 0)
 
 	for rows.Next() {
 		var ev domain.AlarmEvent
@@ -342,14 +379,14 @@ func (a *alarmRepo) ListEvents(ctx context.Context, alarmID int64) ([]domain.Ala
 			return nil, err
 		}
 
-		if payload.Valid {
+		if payload.Valid && payload.String != "" {
 			ev.Payload = []byte(payload.String)
 		}
 
 		out = append(out, ev)
 	}
 
-	return out, nil
+	return out, rows.Err()
 }
 
 func boolToInt(b bool) int {

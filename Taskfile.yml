@@ -2,8 +2,8 @@ version: "3"
 tasks:
   fmt:
     cmds:
-      - gofmt -s -w .
-      - goimports -w .
+      - gofmt -s -w cmd internal tests
+      - goimports -w cmd internal tests
   lint:
     cmds:
       - golangci-lint run
@@ -19,3 +19,22 @@ tasks:
   build:
     cmds:
       - go build -trimpath -ldflags="-s -w" -o bin/alarmd ./cmd/alarmd
+  web:install:
+    cmds:
+      - npm --prefix web ci
+  web:dev:
+    cmds:
+      - npm --prefix web run dev
+  web:check:
+    cmds:
+      - npm --prefix web run typecheck
+      - npm --prefix web run lint
+  web:build:
+    cmds:
+      - npm --prefix web run build
+  console:
+    cmds:
+      - WEB_DIR=web/out WORKERS=1 go run ./cmd/alarmd
+  demo:
+    cmds:
+      - python3 scripts/console_demo.py

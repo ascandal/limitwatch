@@ -71,6 +71,7 @@ func run() error {
 		Workers:     config.GetenvInt("WORKERS", 0), // 0 -> default inside server.NewApp
 		Trace:       config.BoolEnv("TRACE_ENABLED", false),
 		EnablePprof: config.BoolEnv("PPROF_ENABLED", false),
+		WebDir:      config.Getenv("WEB_DIR", ""),
 	}
 
 	// ----- Build app (DB -> repos -> engine -> manager -> mux) -----

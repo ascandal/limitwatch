@@ -3,3 +3,13 @@
 *.db-wal
 
 *.jwt
+
+# Web build and local tooling
+web/node_modules/
+web/.next/
+web/out/
+web/*.tsbuildinfo
+web/.env*
+bin/
+__pycache__/
+web/next-env.d.ts
