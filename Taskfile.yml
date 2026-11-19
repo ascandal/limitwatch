@@ -29,12 +29,13 @@ tasks:
     cmds:
       - npm --prefix web run typecheck
       - npm --prefix web run lint
+      - npm --prefix web test
   web:build:
     cmds:
       - npm --prefix web run build
   console:
     cmds:
-      - WEB_DIR=web/out WORKERS=1 go run ./cmd/alarmd
+      - npm --prefix web start
   demo:
     cmds:
       - python3 scripts/console_demo.py

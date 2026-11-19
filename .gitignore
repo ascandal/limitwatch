@@ -13,3 +13,4 @@ web/.env*
 bin/
 __pycache__/
 web/next-env.d.ts
+!web/.env.example

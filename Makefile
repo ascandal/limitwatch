@@ -37,12 +37,13 @@ web-dev:
 web-check:
 	npm --prefix web run typecheck
 	npm --prefix web run lint
+	npm --prefix web test
 
 web-build:
 	npm --prefix web run build
 
 console:
-	WEB_DIR=web/out WORKERS=1 go run ./cmd/alarmd
+	npm --prefix web start
 
 demo:
 	python3 scripts/console_demo.py

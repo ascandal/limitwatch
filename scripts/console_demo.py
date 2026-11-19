@@ -31,9 +31,6 @@ def main():
     parser.add_argument("--port", type=int, default=8080)
     parser.add_argument("--check", action="store_true", help="verify the full replay and restart, then exit")
     args = parser.parse_args()
-    assets = ROOT / "web" / "out"
-    if not (assets / "index.html").is_file():
-        parser.error("Build the console first: make web-build")
     # Refuse to send demo data to a service already listening on this port.
     with socket.socket() as probe:
         try:
@@ -52,7 +49,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix="limitwatch-demo-") as tmp:
         binary = Path(tmp) / "alarmd"
         subprocess.run(["go", "build", "-o", str(binary), "./cmd/alarmd"], cwd=ROOT, check=True)
-        env = {**os.environ, "PORT": str(args.port), "WORKERS": "1", "JWT_SECRET": "", "PPROF_ENABLED": "false", "TRACE_ENABLED": "false", "WEB_DIR": str(assets), "DB_DSN": f"file:{tmp}/demo.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"}
+        env = {**os.environ, "PORT": str(args.port), "WORKERS": "1", "JWT_SECRET": "", "PPROF_ENABLED": "false", "TRACE_ENABLED": "false", "DB_DSN": f"file:{tmp}/demo.db?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)"}
         process = None
         log = open(Path(tmp) / "server.log", "w+")
 
@@ -107,8 +104,9 @@ def main():
             send([78, 82, 82, 82], [0, 0.3, 0.6, 0.9])
             alarm = wait_alarm("active")
             path = f'/v1/alarms/{alarm["id"]}'
-            print(f"Synthetic test stand ready: {url}", flush=True)
-            print("Open STAND-1, acknowledge the alarm, then clear it. All demo data is temporary.", flush=True)
+            print(f"Synthetic telemetry API ready: {url}", flush=True)
+            print(f"Run the console separately: LIMITWATCH_API_URL={url} npm --prefix web run dev", flush=True)
+            print("Open http://localhost:3000 and select STAND-1. All demo data is temporary.", flush=True)
             if args.check:
                 call(path + "/ack", {})
                 wait_alarm("acked")

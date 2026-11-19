@@ -1,8 +1,5 @@
 .git
-web/node_modules
-web/.next
-web/out
-web/.env*
+web
 bin
 *.db
 *.db-shm

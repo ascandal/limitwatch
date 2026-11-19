@@ -31,8 +31,7 @@ type Config struct {
 	QueueSize   int
 	Workers     int
 	Trace       bool
-	EnablePprof bool   // off by default in tests
-	WebDir      string // optional Next.js static export directory
+	EnablePprof bool // off by default in tests
 }
 
 type App struct {
@@ -119,25 +118,6 @@ func NewApp(parent context.Context, cfg Config, logger *slog.Logger) (*App, erro
 
 	api.New(repos, mgr, cfg.JWTSecret, logger).Routes(mux)
 
-	if cfg.WebDir != "" {
-		if err := registerWeb(mux, cfg.WebDir); err != nil {
-			cancel()
-			_ = db.Close()
-			return nil, err
-		}
-	} else {
-		// API-only root info
-		mux.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
-			if !allowMethods(w, r, http.MethodGet, http.MethodHead) {
-				return
-			}
-
-			noStore(w)
-
-			writeText(w, http.StatusOK, "LimitWatch in-process server")
-		})
-	}
-
 	if cfg.EnablePprof {
 		registerPprof(mux)
 		logger.Info("pprof enabled (dev only)", "paths", "/debug/pprof/*")
@@ -218,6 +198,14 @@ func registerCommonRoutes(mux *http.ServeMux, logger *slog.Logger) {
 		writeJSON(w, http.StatusOK, payload)
 	})
 
+	// API-only root info; unknown paths retain their normal 404 response.
+	mux.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
+		if !allowMethods(w, r, http.MethodGet, http.MethodHead) {
+			return
+		}
+		noStore(w)
+		writeText(w, http.StatusOK, "LimitWatch in-process server")
+	})
 }
 
 func registerIngest(mux *http.ServeMux, eng *engine.Engine, logger *slog.Logger) {

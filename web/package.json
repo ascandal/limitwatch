@@ -7,11 +7,13 @@
   },
   "scripts": {
     "dev": "next dev --hostname 127.0.0.1",
-    "build": "next build",
+    "build": "next build && node scripts/package-standalone.mjs",
     "typecheck": "next typegen && tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
-    "format": "prettier --write app components lib next.config.mjs eslint.config.mjs",
-    "format:check": "prettier --check app components lib next.config.mjs eslint.config.mjs"
+    "format": "prettier --write app components lib scripts next.config.mjs eslint.config.mjs",
+    "format:check": "prettier --check app components lib scripts next.config.mjs eslint.config.mjs",
+    "start": "node .next/standalone/server.js",
+    "test": "node --test lib/proxy.test.mjs"
   },
   "dependencies": {
     "lucide-react": "1.75.0",
@@ -27,5 +29,6 @@
     "eslint-config-next": "16.4.6",
     "prettier": "^3.6.2",
     "typescript": "5.9.3"
-  }
+  },
+  "type": "module"
 }

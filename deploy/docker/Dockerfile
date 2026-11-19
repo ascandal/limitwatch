@@ -1,16 +1,11 @@
 # Multi-stage Dockerfile for LimitWatch alarmd
-# The exported console needs Node only in this build stage.
-FROM node:24-bookworm-slim AS web-builder
-WORKDIR /web
-COPY web/package.json web/package-lock.json ./
-RUN npm ci --no-fund --no-audit
-COPY web/ ./
-RUN npm run build
-
 # Build stage
 FROM golang:1.25.4 AS builder
 WORKDIR /src
-COPY . .
+COPY go.mod go.sum ./
+RUN go mod download
+COPY cmd/ ./cmd/
+COPY internal/ ./internal/
 
 # Set defaults for build info (can be overridden in CI)
 ARG VERSION=dev
@@ -36,10 +31,8 @@ RUN mkdir -p /out && \
 FROM gcr.io/distroless/static:nonroot
 WORKDIR /app
 
-# Copy the Go service and static console; the runtime needs no Node.js.
+# Copy the Go API service.
 COPY --from=builder /out/alarmd /app/alarmd
-COPY --from=web-builder /web/out /app/web
-ENV WEB_DIR=/app/web
 
 # Listens on port 8080 and runs the process as an unprivileged user.
 EXPOSE 8080
