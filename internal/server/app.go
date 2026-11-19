@@ -198,14 +198,12 @@ func registerCommonRoutes(mux *http.ServeMux, logger *slog.Logger) {
 		writeJSON(w, http.StatusOK, payload)
 	})
 
-	// Basic root info
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	// API-only root info; unknown paths retain their normal 404 response.
+	mux.HandleFunc("/{$}", func(w http.ResponseWriter, r *http.Request) {
 		if !allowMethods(w, r, http.MethodGet, http.MethodHead) {
 			return
 		}
-
 		noStore(w)
-
 		writeText(w, http.StatusOK, "LimitWatch in-process server")
 	})
 }

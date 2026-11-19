@@ -1,0 +1,7 @@
+.git
+web
+bin
+*.db
+*.db-shm
+*.db-wal
+*.jwt

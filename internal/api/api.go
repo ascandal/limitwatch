@@ -246,14 +246,14 @@ func (a *API) handleAlarmOps(w http.ResponseWriter, r *http.Request) {
 	// path: /v1/alarms/{id}/op
 	parts := strings.Split(strings.TrimPrefix(r.URL.Path, "/v1/alarms/"), "/")
 
-	if len(parts) < 2 {
+	if len(parts) != 2 {
 		http.NotFound(w, r)
 		return
 	}
 
 	id, err := strconv.ParseInt(parts[0], 10, 64)
 
-	if err != nil {
+	if err != nil || id <= 0 {
 		http.NotFound(w, r)
 		return
 	}
@@ -261,6 +261,8 @@ func (a *API) handleAlarmOps(w http.ResponseWriter, r *http.Request) {
 	op := parts[1]
 
 	switch op {
+	case "events":
+		a.handleAlarmEvents(w, r, id)
 	case "ack":
 		if r.Method != http.MethodPost {
 			methodNotAllowed(w, "POST")
@@ -274,6 +276,10 @@ func (a *API) handleAlarmOps(w http.ResponseWriter, r *http.Request) {
 		actor := actorFrom(r)
 
 		if err := a.mgr.Ack(r.Context(), id, actor); err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				http.NotFound(w, r)
+				return
+			}
 			if errors.Is(err, domain.ErrConflict) {
 				http.Error(w, "alarm inactive", http.StatusConflict)
 				return
@@ -329,6 +335,10 @@ func (a *API) handleAlarmOps(w http.ResponseWriter, r *http.Request) {
 		actor := actorFrom(r)
 
 		if err := a.mgr.Silence(r.Context(), id, until, actor); err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				http.NotFound(w, r)
+				return
+			}
 			if errors.Is(err, domain.ErrConflict) {
 				http.Error(w, "alarm inactive", http.StatusConflict)
 				return
@@ -356,6 +366,10 @@ func (a *API) handleAlarmOps(w http.ResponseWriter, r *http.Request) {
 		actor := actorFrom(r)
 
 		if err := a.mgr.Clear(r.Context(), id, actor); err != nil {
+			if errors.Is(err, domain.ErrNotFound) {
+				http.NotFound(w, r)
+				return
+			}
 			if a.logger != nil {
 				a.logger.Error("clear failed", "err", err, "alarm", id)
 			}
@@ -382,6 +396,7 @@ func actorFrom(r *http.Request) string {
 // Writes a JSON response with the given status code.
 func writeJSON(w http.ResponseWriter, code int, v any) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
 	w.WriteHeader(code)
 
 	_ = json.NewEncoder(w).Encode(v)
@@ -391,4 +406,55 @@ func writeJSON(w http.ResponseWriter, code int, v any) {
 func methodNotAllowed(w http.ResponseWriter, allow string) {
 	w.Header().Set("Allow", allow)
 	http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+}
+
+// History is ordered by event ID, since source and operator timestamps can differ.
+func (a *API) handleAlarmEvents(w http.ResponseWriter, r *http.Request, id int64) {
+	if r.Method != http.MethodGet {
+		methodNotAllowed(w, "GET")
+		return
+	}
+	if !requireRole(w, r, "viewer") {
+		return
+	}
+	after := int64(0)
+	limit := 50
+	var err error
+	if raw := r.URL.Query().Get("after_id"); raw != "" {
+		after, err = strconv.ParseInt(raw, 10, 64)
+		if err != nil || after < 0 {
+			http.Error(w, "after_id must be a nonnegative integer", http.StatusBadRequest)
+			return
+		}
+	}
+	if raw := r.URL.Query().Get("limit"); raw != "" {
+		limit, err = strconv.Atoi(raw)
+		if err != nil || limit < 1 || limit > 100 {
+			http.Error(w, "limit must be between 1 and 100", http.StatusBadRequest)
+			return
+		}
+	}
+	if _, err := a.repos.Alarms.GetByID(r.Context(), id); err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			http.NotFound(w, r)
+		} else {
+			http.Error(w, "read alarm failed", http.StatusInternalServerError)
+		}
+		return
+	}
+	events, err := a.repos.Alarms.ListEvents(r.Context(), id, after, limit)
+	if err != nil {
+		http.Error(w, "read history failed", http.StatusInternalServerError)
+		return
+	}
+	next := after
+	if len(events) > 0 {
+		next = events[len(events)-1].ID
+	}
+	writeJSON(w, http.StatusOK, struct {
+		Events      []domain.AlarmEvent `json:"events"`
+		NextAfterID int64               `json:"next_after_id"`
+		// A full page may have more data; an extra empty page ends pagination.
+		HasMore bool `json:"has_more"`
+	}{events, next, len(events) == limit})
 }

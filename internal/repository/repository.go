@@ -21,7 +21,9 @@ type AlarmRepository interface {
 	List(ctx context.Context, limit int) ([]domain.Alarm, error)
 	Update(ctx context.Context, a *domain.Alarm) error
 	CreateEvent(ctx context.Context, ev *domain.AlarmEvent) error
-	ListEvents(ctx context.Context, alarmID int64) ([]domain.AlarmEvent, error)
+	ListEvents(ctx context.Context, alarmID, afterID int64, limit int) ([]domain.AlarmEvent, error)
+	// Transact serializes alarm reads and writes and commits them with their events.
+	Transact(ctx context.Context, fn func(AlarmRepository) error) error
 }
 
 // Aggregate entry point (optional)
