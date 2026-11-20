@@ -1,0 +1,1495 @@
+{
+  "machine": {
+    "cpu": "Apple M4 Max",
+    "logical_cpus": 16,
+    "memory_gib": 128,
+    "os": "macOS 26.7.3",
+    "go": "go1.25.4 darwin/arm64"
+  },
+  "scope": "Local HTTP client and Go service share one test process. One engine worker. Fresh on-disk SQLite WAL database per case; synchronous(NORMAL). No web, JWT, or remote network load.",
+  "runs": [
+    {
+      "name": "sweep",
+      "sender_queue_policy": "16 batches per sender",
+      "report": {
+        "started_utc": "2026-11-19T19:20:58Z",
+        "go_version": "go1.25.4",
+        "os": "darwin",
+        "arch": "arm64",
+        "logical_cpus": 16,
+        "gomaxprocs": 16,
+        "commit": "3898cd1d5e7d9b19db2cf0b82e3828ad879987ad",
+        "working_tree_dirty": true,
+        "config": {
+          "duration_ns": 10000000000,
+          "drain_timeout_ns": 5000000000,
+          "max_completion_p99_ns": 250000000,
+          "max_batch_points": 100,
+          "max_http_clients": 4,
+          "engine_workers": 1,
+          "ingest_queue_size": 4096
+        },
+        "results": [
+          {
+            "scenario": {
+              "name": "channels_10_at_10hz",
+              "groups": [
+                {
+                  "channels": 10,
+                  "hz_per_channel": 10
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 10,
+            "target_points_per_second": 100,
+            "confirmed_points_per_second": 99.98452239593311,
+            "planned_points": 1000,
+            "attempted_points": 1000,
+            "confirmed_points": 1000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 400
+            },
+            "observed_ingest_queue_peak": 9,
+            "http_p50_ms": 3.914,
+            "http_p95_ms": 12.444125,
+            "http_p99_ms": 22.185333,
+            "completion_p99_ms": 34.275,
+            "load_wall_seconds": 10.001548,
+            "alarm_drain_seconds": 0.000452042,
+            "archive_written_points": 1000,
+            "archive_retained_points": 1000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 1000,
+            "observed_alarm_events": 1000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "channels_100_at_10hz",
+              "groups": [
+                {
+                  "channels": 100,
+                  "hz_per_channel": 10
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 100,
+            "target_points_per_second": 1000,
+            "confirmed_points_per_second": 999.7917433798539,
+            "planned_points": 10000,
+            "attempted_points": 10000,
+            "confirmed_points": 10000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 400
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 9.450208,
+            "http_p95_ms": 58.690125,
+            "http_p99_ms": 61.31225,
+            "completion_p99_ms": 73.219,
+            "load_wall_seconds": 10.002083,
+            "alarm_drain_seconds": 0.000463,
+            "archive_written_points": 10000,
+            "archive_retained_points": 10000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 10000,
+            "observed_alarm_events": 10000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "channels_250_at_10hz",
+              "groups": [
+                {
+                  "channels": 250,
+                  "hz_per_channel": 10
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 250,
+            "target_points_per_second": 2500,
+            "confirmed_points_per_second": 2499.4911036113044,
+            "planned_points": 25000,
+            "attempted_points": 25000,
+            "confirmed_points": 25000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 400
+            },
+            "observed_ingest_queue_peak": 249,
+            "http_p50_ms": 6.427375,
+            "http_p95_ms": 82.6605,
+            "http_p99_ms": 85.023292,
+            "completion_p99_ms": 97.084,
+            "load_wall_seconds": 10.002036,
+            "alarm_drain_seconds": 0.000259125,
+            "archive_written_points": 25000,
+            "archive_retained_points": 25000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 25000,
+            "observed_alarm_events": 25000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "channels_500_at_10hz",
+              "groups": [
+                {
+                  "channels": 500,
+                  "hz_per_channel": 10
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 500,
+            "target_points_per_second": 5000,
+            "confirmed_points_per_second": 4999.789508861677,
+            "planned_points": 50000,
+            "attempted_points": 50000,
+            "confirmed_points": 50000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 800
+            },
+            "observed_ingest_queue_peak": 398,
+            "http_p50_ms": 2.53025,
+            "http_p95_ms": 82.51175,
+            "http_p99_ms": 181.99575,
+            "completion_p99_ms": 195.201,
+            "load_wall_seconds": 10.000421,
+            "alarm_drain_seconds": 0.022756209,
+            "archive_written_points": 50000,
+            "archive_retained_points": 50000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 50000,
+            "observed_alarm_events": 50000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "channels_1000_at_10hz",
+              "groups": [
+                {
+                  "channels": 1000,
+                  "hz_per_channel": 10
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": false,
+            "problems": [
+              "generator dropped 3150 scheduled points",
+              "HTTP confirmed 96850/100000 points; failures=0",
+              "achieved rate below 98% of target",
+              "scheduled-to-HTTP-completion p99 exceeded limit",
+              "archive written=96850/100000 retained=96850 mismatches=0",
+              "alarm drain exceeded completion limit",
+              "alarm events=95900/100000 mismatches=58950 final states=200"
+            ],
+            "channels": 1000,
+            "target_points_per_second": 10000,
+            "confirmed_points_per_second": 9684.98353552799,
+            "planned_points": 100000,
+            "attempted_points": 96850,
+            "confirmed_points": 96850,
+            "generator_dropped_points": 3150,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 1160
+            },
+            "observed_ingest_queue_peak": 277,
+            "http_p50_ms": 2.275958,
+            "http_p95_ms": 82.172542,
+            "http_p99_ms": 233.296458,
+            "completion_p99_ms": 862.02,
+            "load_wall_seconds": 10.000017,
+            "alarm_drain_seconds": 5.0162,
+            "archive_written_points": 96850,
+            "archive_retained_points": 96850,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 100000,
+            "observed_alarm_events": 95900,
+            "event_mismatches": 58950,
+            "final_alarm_state_mismatches": 200,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "mixed_1_10_100hz",
+              "groups": [
+                {
+                  "channels": 10,
+                  "hz_per_channel": 1
+                },
+                {
+                  "channels": 10,
+                  "hz_per_channel": 10
+                },
+                {
+                  "channels": 10,
+                  "hz_per_channel": 100
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 30,
+            "target_points_per_second": 1110,
+            "confirmed_points_per_second": 1107.4956201541454,
+            "planned_points": 11100,
+            "attempted_points": 11100,
+            "confirmed_points": 11100,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 4000
+            },
+            "observed_ingest_queue_peak": 22,
+            "http_p50_ms": 1.6845,
+            "http_p95_ms": 10.854417,
+            "http_p99_ms": 35.016041,
+            "completion_p99_ms": 47.453,
+            "load_wall_seconds": 10.022613,
+            "alarm_drain_seconds": 0.000404458,
+            "archive_written_points": 11100,
+            "archive_retained_points": 11100,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 11100,
+            "observed_alarm_events": 11100,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "frequency_100hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 100
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 100,
+            "confirmed_points_per_second": 99.97504622846137,
+            "planned_points": 1000,
+            "attempted_points": 1000,
+            "confirmed_points": 1000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 1000
+            },
+            "observed_ingest_queue_peak": 0,
+            "http_p50_ms": 0.825291,
+            "http_p95_ms": 2.178791,
+            "http_p99_ms": 2.501583,
+            "completion_p99_ms": 14.32,
+            "load_wall_seconds": 10.002496,
+            "alarm_drain_seconds": 0.021846541,
+            "archive_written_points": 1000,
+            "archive_retained_points": 1000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 1000,
+            "observed_alarm_events": 1000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "frequency_500hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 500
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 500,
+            "confirmed_points_per_second": 499.76481068009394,
+            "planned_points": 5000,
+            "attempted_points": 5000,
+            "confirmed_points": 5000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 1000
+            },
+            "observed_ingest_queue_peak": 4,
+            "http_p50_ms": 0.91525,
+            "http_p95_ms": 4.525333,
+            "http_p99_ms": 4.771625,
+            "completion_p99_ms": 16.731,
+            "load_wall_seconds": 10.004706,
+            "alarm_drain_seconds": 0.00021375,
+            "archive_written_points": 5000,
+            "archive_retained_points": 5000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 5000,
+            "observed_alarm_events": 5000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "frequency_1000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 1000
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 1000,
+            "confirmed_points_per_second": 999.7453648555713,
+            "planned_points": 10000,
+            "attempted_points": 10000,
+            "confirmed_points": 10000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 1000
+            },
+            "observed_ingest_queue_peak": 9,
+            "http_p50_ms": 1.242583,
+            "http_p95_ms": 4.553917,
+            "http_p99_ms": 5.902,
+            "completion_p99_ms": 17.097,
+            "load_wall_seconds": 10.002547,
+            "alarm_drain_seconds": 0.022269666,
+            "archive_written_points": 10000,
+            "archive_retained_points": 10000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 10000,
+            "observed_alarm_events": 10000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "frequency_2000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 2000
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 2000,
+            "confirmed_points_per_second": 1999.8490113996393,
+            "planned_points": 20000,
+            "attempted_points": 20000,
+            "confirmed_points": 20000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 1000
+            },
+            "observed_ingest_queue_peak": 19,
+            "http_p50_ms": 0.759833,
+            "http_p95_ms": 9.876333,
+            "http_p99_ms": 10.348667,
+            "completion_p99_ms": 21.767,
+            "load_wall_seconds": 10.000755,
+            "alarm_drain_seconds": 0.022443917,
+            "archive_written_points": 20000,
+            "archive_retained_points": 20000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 20000,
+            "observed_alarm_events": 20000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "frequency_5000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 5000
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 5000,
+            "confirmed_points_per_second": 4999.230618407827,
+            "planned_points": 50000,
+            "attempted_points": 50000,
+            "confirmed_points": 50000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 1000
+            },
+            "observed_ingest_queue_peak": 49,
+            "http_p50_ms": 0.752917,
+            "http_p95_ms": 1.13625,
+            "http_p99_ms": 10.028084,
+            "completion_p99_ms": 21.742,
+            "load_wall_seconds": 10.001539,
+            "alarm_drain_seconds": 0.022766333,
+            "archive_written_points": 50000,
+            "archive_retained_points": 50000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 50000,
+            "observed_alarm_events": 50000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "archive_only_5000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 5000
+                }
+              ],
+              "alarm_rules": false
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 5000,
+            "confirmed_points_per_second": 4998.547921828708,
+            "planned_points": 50000,
+            "attempted_points": 50000,
+            "confirmed_points": 50000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 1000
+            },
+            "observed_ingest_queue_peak": 49,
+            "http_p50_ms": 1.970334,
+            "http_p95_ms": 2.866125,
+            "http_p99_ms": 4.182792,
+            "completion_p99_ms": 15.489,
+            "load_wall_seconds": 10.002905,
+            "alarm_drain_seconds": 0,
+            "archive_written_points": 50000,
+            "archive_retained_points": 50000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 0,
+            "observed_alarm_events": 0,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "archive_only_10000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 10000
+                }
+              ],
+              "alarm_rules": false
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 10000,
+            "confirmed_points_per_second": 9995.575958080954,
+            "planned_points": 100000,
+            "attempted_points": 100000,
+            "confirmed_points": 100000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 1000
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 2.762375,
+            "http_p95_ms": 3.919292,
+            "http_p99_ms": 4.82025,
+            "completion_p99_ms": 16.176,
+            "load_wall_seconds": 10.004426,
+            "alarm_drain_seconds": 0,
+            "archive_written_points": 100000,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 0,
+            "observed_alarm_events": 0,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "archive_only_20000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 20000
+                }
+              ],
+              "alarm_rules": false
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 20000,
+            "confirmed_points_per_second": 19991.639496362623,
+            "planned_points": 200000,
+            "attempted_points": 200000,
+            "confirmed_points": 200000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 2000
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 1.538375,
+            "http_p95_ms": 2.0795,
+            "http_p99_ms": 3.644541,
+            "completion_p99_ms": 16.586,
+            "load_wall_seconds": 10.004182,
+            "alarm_drain_seconds": 0,
+            "archive_written_points": 200000,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 0,
+            "observed_alarm_events": 0,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "boundaries",
+      "sender_queue_policy": "16 batches per sender",
+      "report": {
+        "started_utc": "2026-11-19T19:23:53Z",
+        "go_version": "go1.25.4",
+        "os": "darwin",
+        "arch": "arm64",
+        "logical_cpus": 16,
+        "gomaxprocs": 16,
+        "commit": "3898cd1d5e7d9b19db2cf0b82e3828ad879987ad",
+        "working_tree_dirty": true,
+        "config": {
+          "check_timing": true,
+          "duration_ns": 10000000000,
+          "drain_timeout_ns": 5000000000,
+          "max_completion_p99_ns": 250000000,
+          "max_batch_points": 100,
+          "max_http_clients": 4,
+          "engine_workers": 1,
+          "ingest_queue_size": 4096
+        },
+        "results": [
+          {
+            "scenario": {
+              "name": "channels_1000_at_1hz",
+              "groups": [
+                {
+                  "channels": 1000,
+                  "hz_per_channel": 1
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1000,
+            "target_points_per_second": 1000,
+            "confirmed_points_per_second": 999.8447241143451,
+            "planned_points": 10000,
+            "attempted_points": 10000,
+            "confirmed_points": 10000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 120
+            },
+            "observed_ingest_queue_peak": 396,
+            "http_p50_ms": 3.038833,
+            "http_p95_ms": 84.362958,
+            "http_p99_ms": 110.760875,
+            "completion_p99_ms": 133.645,
+            "load_wall_seconds": 10.001553,
+            "alarm_drain_seconds": 0.000290333,
+            "archive_written_points": 10000,
+            "archive_retained_points": 10000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 10000,
+            "observed_alarm_events": 10000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "frequency_10000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 10000
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 10000,
+            "confirmed_points_per_second": 9997.16580349471,
+            "planned_points": 100000,
+            "attempted_points": 100000,
+            "confirmed_points": 100000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 1000
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 0.935959,
+            "http_p95_ms": 1.125,
+            "http_p99_ms": 2.340125,
+            "completion_p99_ms": 20.328,
+            "load_wall_seconds": 10.002835,
+            "alarm_drain_seconds": 0.023587375,
+            "archive_written_points": 100000,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 100000,
+            "observed_alarm_events": 100000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "archive_only_50000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 50000
+                }
+              ],
+              "alarm_rules": false
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 50000,
+            "confirmed_points_per_second": 49973.943585814355,
+            "planned_points": 500000,
+            "attempted_points": 500000,
+            "confirmed_points": 500000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 5000
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 1.022417,
+            "http_p95_ms": 1.230334,
+            "http_p99_ms": 2.873708,
+            "completion_p99_ms": 17.982,
+            "load_wall_seconds": 10.005214,
+            "alarm_drain_seconds": 0,
+            "archive_written_points": 500000,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 0,
+            "observed_alarm_events": 0,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "archive_only_100000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 100000
+                }
+              ],
+              "alarm_rules": false
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 100000,
+            "confirmed_points_per_second": 99907.05646537027,
+            "planned_points": 1000000,
+            "attempted_points": 1000000,
+            "confirmed_points": 1000000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 10000
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 0.876417,
+            "http_p95_ms": 1.083333,
+            "http_p99_ms": 2.162458,
+            "completion_p99_ms": 20.381,
+            "load_wall_seconds": 10.009303,
+            "alarm_drain_seconds": 0,
+            "archive_written_points": 1000000,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 0,
+            "observed_alarm_events": 0,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "overload",
+      "sender_queue_policy": "16 batches per sender",
+      "report": {
+        "started_utc": "2026-11-19T19:25:04Z",
+        "go_version": "go1.25.4",
+        "os": "darwin",
+        "arch": "arm64",
+        "logical_cpus": 16,
+        "gomaxprocs": 16,
+        "commit": "3898cd1d5e7d9b19db2cf0b82e3828ad879987ad",
+        "working_tree_dirty": true,
+        "config": {
+          "check_timing": true,
+          "duration_ns": 10000000000,
+          "drain_timeout_ns": 5000000000,
+          "max_completion_p99_ns": 250000000,
+          "max_batch_points": 100,
+          "max_http_clients": 4,
+          "engine_workers": 1,
+          "ingest_queue_size": 4096
+        },
+        "results": [
+          {
+            "scenario": {
+              "name": "frequency_20000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 20000
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": false,
+            "problems": [
+              "generator dropped 48700 scheduled points",
+              "HTTP confirmed 151300/200000 points; failures=0",
+              "achieved rate below 98% of target",
+              "alarm drain exceeded completion limit",
+              "archive written=151300/200000 retained=100000 mismatches=0",
+              "alarm events=146514/200000 mismatches=143015 final states=0"
+            ],
+            "channels": 1,
+            "target_points_per_second": 20000,
+            "confirmed_points_per_second": 15049.672373705347,
+            "planned_points": 200000,
+            "attempted_points": 151300,
+            "confirmed_points": 151300,
+            "generator_dropped_points": 48700,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 1513
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 0.869791,
+            "http_p95_ms": 35.511958,
+            "http_p99_ms": 106.076458,
+            "completion_p99_ms": 168.869,
+            "load_wall_seconds": 10.053375,
+            "alarm_drain_seconds": 5.011506666,
+            "archive_written_points": 151300,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 200000,
+            "observed_alarm_events": 146514,
+            "event_mismatches": 143015,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "frequency_50000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 50000
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": false,
+            "problems": [
+              "generator dropped 314500 scheduled points",
+              "HTTP confirmed 185500/500000 points; failures=0",
+              "achieved rate below 98% of target",
+              "alarm drain exceeded completion limit",
+              "archive written=185500/500000 retained=100000 mismatches=0",
+              "alarm events=141294/500000 mismatches=139295 final states=0"
+            ],
+            "channels": 1,
+            "target_points_per_second": 50000,
+            "confirmed_points_per_second": 18475.37610836072,
+            "planned_points": 500000,
+            "attempted_points": 185500,
+            "confirmed_points": 185500,
+            "generator_dropped_points": 314500,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 1855
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 0.879583,
+            "http_p95_ms": 34.358625,
+            "http_p99_ms": 106.135167,
+            "completion_p99_ms": 197.416,
+            "load_wall_seconds": 10.040391,
+            "alarm_drain_seconds": 5.020899083,
+            "archive_written_points": 185500,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 500000,
+            "observed_alarm_events": 141294,
+            "event_mismatches": 139295,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "archive_only_200000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 200000
+                }
+              ],
+              "alarm_rules": false
+            },
+            "passed": false,
+            "problems": [
+              "generator dropped 878700 scheduled points",
+              "HTTP confirmed 1121300/2000000 points; failures=0",
+              "achieved rate below 98% of target",
+              "archive written=1121300/2000000 retained=100000 mismatches=0"
+            ],
+            "channels": 1,
+            "target_points_per_second": 200000,
+            "confirmed_points_per_second": 111968.97741358152,
+            "planned_points": 2000000,
+            "attempted_points": 1121300,
+            "confirmed_points": 1121300,
+            "generator_dropped_points": 878700,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 11213
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 0.874125,
+            "http_p95_ms": 1.095834,
+            "http_p99_ms": 2.247583,
+            "completion_p99_ms": 25.966,
+            "load_wall_seconds": 10.014381,
+            "alarm_drain_seconds": 0,
+            "archive_written_points": 1121300,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 0,
+            "observed_alarm_events": 0,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "archive_only_400000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 400000
+                }
+              ],
+              "alarm_rules": false
+            },
+            "passed": false,
+            "problems": [
+              "generator dropped 2885800 scheduled points",
+              "HTTP confirmed 1114200/4000000 points; failures=0",
+              "achieved rate below 98% of target",
+              "archive written=1114200/4000000 retained=100000 mismatches=0"
+            ],
+            "channels": 1,
+            "target_points_per_second": 400000,
+            "confirmed_points_per_second": 111248.92140865777,
+            "planned_points": 4000000,
+            "attempted_points": 1114200,
+            "confirmed_points": 1114200,
+            "generator_dropped_points": 2885800,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 11142
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 0.879375,
+            "http_p95_ms": 1.105791,
+            "http_p99_ms": 2.184375,
+            "completion_p99_ms": 26.215,
+            "load_wall_seconds": 10.015378,
+            "alarm_drain_seconds": 0,
+            "archive_written_points": 1114200,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 0,
+            "observed_alarm_events": 0,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "confirmation",
+      "sender_queue_policy": "16 batches per sender",
+      "report": {
+        "started_utc": "2026-11-19T19:26:27Z",
+        "go_version": "go1.25.4",
+        "os": "darwin",
+        "arch": "arm64",
+        "logical_cpus": 16,
+        "gomaxprocs": 16,
+        "commit": "3898cd1d5e7d9b19db2cf0b82e3828ad879987ad",
+        "working_tree_dirty": true,
+        "config": {
+          "check_timing": true,
+          "duration_ns": 60000000000,
+          "drain_timeout_ns": 5000000000,
+          "max_completion_p99_ns": 250000000,
+          "max_batch_points": 100,
+          "max_http_clients": 4,
+          "engine_workers": 1,
+          "ingest_queue_size": 4096
+        },
+        "results": [
+          {
+            "scenario": {
+              "name": "channels_500_at_10hz",
+              "groups": [
+                {
+                  "channels": 500,
+                  "hz_per_channel": 10
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 500,
+            "target_points_per_second": 5000,
+            "confirmed_points_per_second": 4999.8285058822485,
+            "planned_points": 300000,
+            "attempted_points": 300000,
+            "confirmed_points": 300000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 4800
+            },
+            "observed_ingest_queue_peak": 399,
+            "http_p50_ms": 2.539625,
+            "http_p95_ms": 83.189458,
+            "http_p99_ms": 113.64,
+            "completion_p99_ms": 194.512,
+            "load_wall_seconds": 60.002058,
+            "alarm_drain_seconds": 0.001320916,
+            "archive_written_points": 300000,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 300000,
+            "observed_alarm_events": 300000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "frequency_10000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 10000
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 10000,
+            "confirmed_points_per_second": 9999.52868888113,
+            "planned_points": 600000,
+            "attempted_points": 600000,
+            "confirmed_points": 600000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 6000
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 1.039916,
+            "http_p95_ms": 1.377625,
+            "http_p99_ms": 2.563875,
+            "completion_p99_ms": 14.516,
+            "load_wall_seconds": 60.002828,
+            "alarm_drain_seconds": 0.026685833,
+            "archive_written_points": 600000,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 600000,
+            "observed_alarm_events": 600000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "scenario": {
+              "name": "archive_only_100000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 100000
+                }
+              ],
+              "alarm_rules": false
+            },
+            "passed": false,
+            "problems": [
+              "generator dropped 1200 scheduled points",
+              "HTTP confirmed 5998800/6000000 points; failures=0",
+              "archive written=5998800/6000000 retained=100000 mismatches=0"
+            ],
+            "channels": 1,
+            "target_points_per_second": 100000,
+            "confirmed_points_per_second": 99964.67541525884,
+            "planned_points": 6000000,
+            "attempted_points": 5998800,
+            "confirmed_points": 5998800,
+            "generator_dropped_points": 1200,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 59988
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 0.879917,
+            "http_p95_ms": 1.113917,
+            "http_p99_ms": 2.640166,
+            "completion_p99_ms": 21.256,
+            "load_wall_seconds": 60.009198,
+            "alarm_drain_seconds": 0,
+            "archive_written_points": 5998800,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 0,
+            "observed_alarm_events": 0,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "unbatched",
+      "sender_queue_policy": "at least 16 batches, sized for two flushes",
+      "report": {
+        "started_utc": "2026-11-19T19:29:51Z",
+        "go_version": "go1.25.4",
+        "os": "darwin",
+        "arch": "arm64",
+        "logical_cpus": 16,
+        "gomaxprocs": 16,
+        "commit": "3898cd1d5e7d9b19db2cf0b82e3828ad879987ad",
+        "working_tree_dirty": true,
+        "config": {
+          "check_timing": true,
+          "duration_ns": 10000000000,
+          "drain_timeout_ns": 5000000000,
+          "max_completion_p99_ns": 250000000,
+          "max_batch_points": 1,
+          "max_http_clients": 4,
+          "engine_workers": 1,
+          "ingest_queue_size": 4096
+        },
+        "results": [
+          {
+            "max_sender_queue_batches": 16,
+            "scenario": {
+              "name": "frequency_500hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 500
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 500,
+            "confirmed_points_per_second": 499.86103863126056,
+            "planned_points": 5000,
+            "attempted_points": 5000,
+            "confirmed_points": 5000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 5000
+            },
+            "observed_ingest_queue_peak": 0,
+            "http_p50_ms": 0.4075,
+            "http_p95_ms": 1.81175,
+            "http_p99_ms": 2.524208,
+            "completion_p99_ms": 17.726,
+            "load_wall_seconds": 10.00278,
+            "alarm_drain_seconds": 0.021512541,
+            "archive_written_points": 5000,
+            "archive_retained_points": 5000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 5000,
+            "observed_alarm_events": 5000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "max_sender_queue_batches": 20,
+            "scenario": {
+              "name": "frequency_1000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 1000
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 1000,
+            "confirmed_points_per_second": 999.3948664083897,
+            "planned_points": 10000,
+            "attempted_points": 10000,
+            "confirmed_points": 10000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 10000
+            },
+            "observed_ingest_queue_peak": 0,
+            "http_p50_ms": 0.313209,
+            "http_p95_ms": 1.509709,
+            "http_p99_ms": 1.802916,
+            "completion_p99_ms": 17.427,
+            "load_wall_seconds": 10.006055,
+            "alarm_drain_seconds": 0.000206833,
+            "archive_written_points": 10000,
+            "archive_retained_points": 10000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 10000,
+            "observed_alarm_events": 10000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "max_sender_queue_batches": 40,
+            "scenario": {
+              "name": "frequency_2000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 2000
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 2000,
+            "confirmed_points_per_second": 1998.5338755488972,
+            "planned_points": 20000,
+            "attempted_points": 20000,
+            "confirmed_points": 20000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 20000
+            },
+            "observed_ingest_queue_peak": 0,
+            "http_p50_ms": 0.203542,
+            "http_p95_ms": 1.394459,
+            "http_p99_ms": 1.494708,
+            "completion_p99_ms": 19.11,
+            "load_wall_seconds": 10.007336,
+            "alarm_drain_seconds": 0.02141575,
+            "archive_written_points": 20000,
+            "archive_retained_points": 20000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 20000,
+            "observed_alarm_events": 20000,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          },
+          {
+            "max_sender_queue_batches": 100,
+            "scenario": {
+              "name": "frequency_5000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 5000
+                }
+              ],
+              "alarm_rules": true
+            },
+            "passed": false,
+            "problems": [
+              "generator dropped 10379 scheduled points",
+              "HTTP confirmed 39621/50000 points; failures=0",
+              "achieved rate below 98% of target",
+              "alarm drain exceeded completion limit",
+              "archive written=39621/50000 retained=39621 mismatches=0",
+              "alarm events=39287/50000 mismatches=39052 final states=1"
+            ],
+            "channels": 1,
+            "target_points_per_second": 5000,
+            "confirmed_points_per_second": 3952.6054464570657,
+            "planned_points": 50000,
+            "attempted_points": 39621,
+            "confirmed_points": 39621,
+            "generator_dropped_points": 10379,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 39621
+            },
+            "observed_ingest_queue_peak": 0,
+            "http_p50_ms": 0.12875,
+            "http_p95_ms": 1.242708,
+            "http_p99_ms": 3.433875,
+            "completion_p99_ms": 43.542,
+            "load_wall_seconds": 10.024021,
+            "alarm_drain_seconds": 5.015832459,
+            "archive_written_points": 39621,
+            "archive_retained_points": 39621,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 50000,
+            "observed_alarm_events": 39287,
+            "event_mismatches": 39052,
+            "final_alarm_state_mismatches": 1,
+            "server_errors": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "archive-confirmation",
+      "sender_queue_policy": "at least 16 batches, sized for two flushes",
+      "report": {
+        "started_utc": "2026-11-19T19:31:04Z",
+        "go_version": "go1.25.4",
+        "os": "darwin",
+        "arch": "arm64",
+        "logical_cpus": 16,
+        "gomaxprocs": 16,
+        "commit": "3898cd1d5e7d9b19db2cf0b82e3828ad879987ad",
+        "working_tree_dirty": true,
+        "config": {
+          "check_timing": true,
+          "duration_ns": 60000000000,
+          "drain_timeout_ns": 5000000000,
+          "max_completion_p99_ns": 250000000,
+          "max_batch_points": 100,
+          "max_http_clients": 4,
+          "engine_workers": 1,
+          "ingest_queue_size": 4096
+        },
+        "results": [
+          {
+            "max_sender_queue_batches": 16,
+            "scenario": {
+              "name": "archive_only_50000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 50000
+                }
+              ],
+              "alarm_rules": false
+            },
+            "passed": true,
+            "problems": null,
+            "channels": 1,
+            "target_points_per_second": 50000,
+            "confirmed_points_per_second": 49995.639546970844,
+            "planned_points": 3000000,
+            "attempted_points": 3000000,
+            "confirmed_points": 3000000,
+            "generator_dropped_points": 0,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 30000
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 0.99875,
+            "http_p95_ms": 1.254541,
+            "http_p99_ms": 3.123125,
+            "completion_p99_ms": 17.771,
+            "load_wall_seconds": 60.005233,
+            "alarm_drain_seconds": 0,
+            "archive_written_points": 3000000,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 0,
+            "observed_alarm_events": 0,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "archive-overload",
+      "sender_queue_policy": "at least 16 batches, sized for two flushes",
+      "report": {
+        "started_utc": "2026-11-19T19:32:18Z",
+        "go_version": "go1.25.4",
+        "os": "darwin",
+        "arch": "arm64",
+        "logical_cpus": 16,
+        "gomaxprocs": 16,
+        "commit": "3898cd1d5e7d9b19db2cf0b82e3828ad879987ad",
+        "working_tree_dirty": true,
+        "config": {
+          "check_timing": true,
+          "duration_ns": 10000000000,
+          "drain_timeout_ns": 5000000000,
+          "max_completion_p99_ns": 250000000,
+          "max_batch_points": 100,
+          "max_http_clients": 4,
+          "engine_workers": 1,
+          "ingest_queue_size": 4096
+        },
+        "results": [
+          {
+            "max_sender_queue_batches": 40,
+            "scenario": {
+              "name": "archive_only_200000hz",
+              "groups": [
+                {
+                  "channels": 1,
+                  "hz_per_channel": 200000
+                }
+              ],
+              "alarm_rules": false
+            },
+            "passed": false,
+            "problems": [
+              "generator dropped 881300 scheduled points",
+              "HTTP confirmed 1118700/2000000 points; failures=0",
+              "achieved rate below 98% of target",
+              "archive written=1118700/2000000 retained=100000 mismatches=0"
+            ],
+            "channels": 1,
+            "target_points_per_second": 200000,
+            "confirmed_points_per_second": 111471.26727695036,
+            "planned_points": 2000000,
+            "attempted_points": 1118700,
+            "confirmed_points": 1118700,
+            "generator_dropped_points": 881300,
+            "http_failures": 0,
+            "http_status_counts": {
+              "202": 11187
+            },
+            "observed_ingest_queue_peak": 99,
+            "http_p50_ms": 0.871917,
+            "http_p95_ms": 1.10575,
+            "http_p99_ms": 2.191583,
+            "completion_p99_ms": 47.992,
+            "load_wall_seconds": 10.03577,
+            "alarm_drain_seconds": 0,
+            "archive_written_points": 1118700,
+            "archive_retained_points": 100000,
+            "archive_mismatches": 0,
+            "expected_alarm_events": 0,
+            "observed_alarm_events": 0,
+            "event_mismatches": 0,
+            "final_alarm_state_mismatches": 0,
+            "server_errors": 0
+          }
+        ]
+      }
+    }
+  ]
+}

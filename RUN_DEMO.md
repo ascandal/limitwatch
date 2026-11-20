@@ -68,11 +68,11 @@ Start all three terminals at least **one minute before presenting** so the chart
 2. **Operator response:** open **Alarms**, select `BatteryLowDemo`, and click **Acknowledge**. Explain that acknowledgment records a response; it does not change the measured voltage.
 3. **Recovery:** stop the generator with **Ctrl+C in Terminal 3**, then send a healthy value from that terminal:
 
-   ```bash
-   curl -fsS -X POST http://127.0.0.1:8081/v1/ingest \
-     -H 'Content-Type: application/json' \
-     -d '{"name":"Battery.Voltage","value":24.2,"entity":"DEMO-1"}'
-   ```
+```bash
+curl -fsS -X POST http://127.0.0.1:8081/v1/ingest \
+  -H 'Content-Type: application/json' \
+  -d '{"name":"Battery.Voltage","value":24.2,"entity":"DEMO-1"}'
+```
 
 4. **Clear and inspect:** wait five seconds. The latched alarm should remain acknowledged. Click **Clear alarm** and show its `activated`, `acked`, and `cleared` history. In **Telemetry**, show the retained chart and expand the time-bucket table.
 

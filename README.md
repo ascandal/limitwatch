@@ -210,6 +210,10 @@ go run ./cmd/alarmctl gen \
 
 The generator produces simple patterns (`Battery.Voltage`, `Temp.C`) that exercise threshold and ROC rules.
 
+## Performance testing
+
+Run `make perf` for a repeatable channel-count, mixed-rate, and frequency sweep. It uses temporary databases and reports throughput, latency, history retention, and missing alarm events. Overload cases return a nonzero exit. See [Performance testing](docs/PERFORMANCE.md) for commands, pass criteria, and measured results.
+
 ## Known limitations
 
 - **Rules reload:** engine loads rules at startup. Rules created via the REST API take effect after restart (no hot‑reload yet).

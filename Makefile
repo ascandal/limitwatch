@@ -1,4 +1,4 @@
-.PHONY: all fmt vet staticcheck test build run docker web-install web-dev web-check web-build console demo
+.PHONY: all fmt vet staticcheck test build run docker web-install web-dev web-check web-build console demo perf
 
 VERSION ?= dev
 COMMIT  ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
@@ -47,3 +47,7 @@ console:
 
 demo:
 	python3 scripts/console_demo.py
+
+# Exploratory load sweep; overload cases intentionally return nonzero.
+perf:
+	LIMITWATCH_PERF=1 LIMITWATCH_PERF_OUTPUT="$(CURDIR)/bin/performance.json" go test ./tests/performance -run '^TestScale$$' -count=1 -timeout 20m -v
